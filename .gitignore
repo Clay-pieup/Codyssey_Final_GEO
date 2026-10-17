@@ -1,0 +1,18 @@
+# API 키 같은 비밀 설정값 — 절대 올리지 않음
+.env
+.env.*
+!.env.example
+
+# Python이 자동으로 만드는 파일
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 배포 도구가 만드는 폴더
+.vercel/
+node_modules/
+
+# 운영체제가 만드는 파일
+.DS_Store
+Thumbs.db
