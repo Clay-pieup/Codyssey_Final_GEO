@@ -14,8 +14,12 @@ from google.genai import types
 
 load_dotenv()  # 프로젝트 맨 위의 .env 파일에서 GEMINI_API_KEY 등을 읽어 옴
 
-# 모델 이름은 .env 에서 바꿀 수 있게 함. 기본값은 월요일 실측 때 확정 [실측 후 조정]
-DEFAULT_MODEL = "gemini-2.5-flash"
+PROVIDER = "gemini"  # 2차에 ChatGPT·Claude를 붙이면 "openai", "anthropic" 등으로 구분
+
+# 기본 모델: Gemini 3 계열.
+# 이유: 웹 검색(Grounding) 월 5,000회 무료는 Gemini 3 이상 모델 기준 (2.5 이하는 요청 단위 과금이라 비용 계산이 달라짐)
+# .env 의 GEMINI_MODEL 로 바꿀 수 있음 (예: Flash-Lite 계열). 최종 선택은 실측 후 확정 [실측 후 조정]
+DEFAULT_MODEL = "gemini-3.8-flash"
 
 _client = None  # 처음 호출할 때 한 번만 만들고 재사용
 
@@ -37,6 +41,8 @@ class GeminiResult:
     """모든 AI 호출 결과를 같은 모양으로 돌려주기 위한 상자."""
 
     ok: bool                      # 호출 성공 여부
+    provider: str = PROVIDER      # 어느 회사 AI인지 (gemini / 나중에 openai, anthropic)
+    model: str = ""               # 실제 사용한 모델 이름
     text: str = ""                # 답변 본문
     sources: list = field(default_factory=list)  # 웹 검색 사용 시 인용된 사이트 주소
     elapsed: float = 0.0          # 걸린 시간(초) → 300초 제한 실측에 사용
@@ -79,6 +85,7 @@ def ask_gemini(
             elapsed = time.perf_counter() - start
             return GeminiResult(
                 ok=True,
+                model=model,
                 text=(response.text or "").strip(),
                 sources=_extract_sources(response),
                 elapsed=round(elapsed, 2),
@@ -88,7 +95,7 @@ def ask_gemini(
             if attempt < retries:
                 time.sleep(1)  # 잠깐 쉬고 다시 시도
 
-    return GeminiResult(ok=False, error=last_error)
+    return GeminiResult(ok=False, model=model, error=last_error)
 
 
 def _extract_sources(response) -> list:

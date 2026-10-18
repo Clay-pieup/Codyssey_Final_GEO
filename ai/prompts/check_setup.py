@@ -42,7 +42,7 @@ def main() -> None:
 
     result = ask_gemini("한 문장으로 인사해 줘.")
     if result.ok:
-        print(f"   OK: {result.elapsed}초 걸림 → 답변: {result.text[:60]}")
+        print(f"   OK: {result.provider} / {result.model}, {result.elapsed}초 걸림 → 답변: {result.text[:60]}")
     else:
         print(f"   실패: {result.error}")
 
