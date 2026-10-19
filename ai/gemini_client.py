@@ -5,6 +5,7 @@
 """
 
 import os
+import threading
 import time
 from dataclasses import dataclass, field
 
@@ -21,19 +22,29 @@ PROVIDER = "gemini"  # 2차에 ChatGPT·Claude를 붙이면 "openai", "anthropic
 # .env 의 GEMINI_MODEL 로 바꿀 수 있음 (예: Flash-Lite 계열). 최종 선택은 실측 후 확정 [실측 후 조정]
 DEFAULT_MODEL = "gemini-3.8-flash"
 
+# 호출 1회 시간 제한(초). 응답이 없을 때 끝없이 기다리지 않게 함
+# (10/19 실측: 3.8-flash 첫 호출이 2분 가까이 응답 없음)
+TIMEOUT_SEC = int(os.getenv("GEMINI_TIMEOUT_SEC", "60"))
+
 _client = None  # 처음 호출할 때 한 번만 만들고 재사용
+_client_lock = threading.Lock()  # 동시 호출 때 연결 객체가 두 번 만들어지지 않게
 
 
 def _get_client() -> genai.Client:
     global _client
-    if _client is None:
+    with _client_lock:
+        if _client is not None:
+            return _client
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             raise RuntimeError(
                 "GEMINI_API_KEY가 없습니다. .env.example 을 복사해 .env 를 만들고 키를 넣어 주세요."
             )
-        _client = genai.Client(api_key=api_key)
-    return _client
+        _client = genai.Client(
+            api_key=api_key,
+            http_options=types.HttpOptions(timeout=TIMEOUT_SEC * 1000),  # 밀리초 단위
+        )
+        return _client
 
 
 @dataclass
