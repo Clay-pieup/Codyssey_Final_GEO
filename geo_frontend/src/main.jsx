@@ -9,7 +9,12 @@ import "./styles.css";
 
 function App() {
   const [form, setForm] = useState({
-    storeName: "", region: "", menu: "", email: "", consent: false
+    storeName: "",
+region: "",
+menu: "",
+station: "",
+email: "",
+consent: false
   });
   const [showResult, setShowResult] = useState(false);
   const [error, setError] = useState("");
@@ -22,19 +27,21 @@ function App() {
 
   const startDiagnosis = (event) => {
     event.preventDefault();
-    if (!form.storeName.trim() || !form.region.trim() || !form.menu.trim() || !form.email.trim()) {
-      setError("상호, 지역, 대표 메뉴, 이메일을 모두 입력해 주세요.");
+    if (!form.storeName.trim() || !form.region.trim() || !form.menu.trim() ) {
+      setError("상호, 지역, 대표 메뉴를 모두 입력해 주세요.");
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      setError("이메일 주소를 확인해 주세요.");
-      return;
+    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+  setError("이메일 주소를 확인해 주세요.");
+  return;
     }
-    if (!form.consent) {
-      setError("결과 발송을 위한 개인정보 수집·이용에 동의해 주세요.");
-      return;
+    
+    if (form.email.trim() && !form.consent) {
+  setError("이메일로 결과를 받으려면 개인정보 수집·이용에 동의해 주세요.");
+  return;
     }
-    setShowResult(true);
+    
+        setShowResult(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -129,10 +136,25 @@ function App() {
                 <label htmlFor="menu">대표 메뉴 <span>*</span></label>
                 <div className="input-wrap"><Utensils size={18} /><input id="menu" value={form.menu} onChange={(e) => update("menu", e.target.value)} placeholder="예: 돈가스, 냉모밀, 카레" maxLength={150} /></div>
                 <p className="field-help">메뉴는 쉼표로 구분해 여러 개 입력할 수 있습니다.</p>
+                <label htmlFor="station">가까운 역 (선택)</label>
+                <div className="input-wrap">
+                  <MapPin size={18} />
+                  <input
+                    id="station"
+                    value={form.station}
+                    onChange={(e) => update("station", e.target.value)}
+                    placeholder="예: 서울역 (없으면 비워두세요)"
+                    maxLength={100}
+                  />
+               </div>
+               <p className="field-help">
+                  가까운 역이 있는 경우에만 입력해 주세요.
+               </p>
 
                 <div className="form-divider" />
-                <label htmlFor="email">결과 받을 이메일 <span>*</span></label>
-                <div className="input-wrap"><Mail size={18} /><input id="email" type="email" value={form.email} onChange={(e) => update("email", e.target.value)} placeholder="name@example.com" maxLength={254} /></div>
+                <label htmlFor="email">결과 받을 이메일 (선택)</label>
+                <div className="input-wrap"><Mail size={18} /><input id="email" type="email" value={form.email} onChange={(e) => update("email", e.target.value)} placeholder="name@example.com" maxLength={254} disabled={!form.consent} />
+                </div>
                 <div className="consent-box">
                   <label className="consent-label">
                     <input type="checkbox" checked={form.consent} onChange={(e) => update("consent", e.target.checked)} />
