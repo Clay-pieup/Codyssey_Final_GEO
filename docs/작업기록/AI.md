@@ -123,13 +123,15 @@
 
 ### 화면 기록 (docs/images/ai/)
 
-| 날짜 | 화면 | 파일 | 관련 기록 |
-| --- | --- | --- | --- |
-| 10/19 | 진단 전체 실행 (명동교자) | [1019_diagnosis_myeongdong.png](../images/ai/1019_diagnosis_myeongdong.png) | 진단 전체 흐름과 run_diagnosis() |
-| 10/19 | 실측, 명동교자 12회 | [1019_measure_myeongdong.png](../images/ai/1019_measure_myeongdong.png) | 질의 소요 시간 실측 |
-| 10/19 | 실측 결과 표 | [1019_measure_result.png](../images/ai/1019_measure_result.png) | 질의 소요 시간 실측 |
-| 10/19 | 실측, 우래옥 12회 | [1019_measure_uraeok.png](../images/ai/1019_measure_uraeok.png) | 질의 소요 시간 실측 |
-| 10/19 | 질문 생성 성공 | [1019_questions_success.png](../images/ai/1019_questions_success.png) | 질문 생성 기능 |
-| 10/19 | 질문 생성 실패 (지역 오타를 검사가 잡음) | [1019_questions_check_fail.png](../images/ai/1019_questions_check_fail.png) | 질문 생성 기능 |
+| 순서 | 날짜 | 작업 | 화면 | 파일 |
+| :-: | --- | --- | --- | --- |
+| 1 | 10/19 | 질의 소요 시간 실측 | 명동교자 12회 측정 | [1019_measure_myeongdong.png](../images/ai/1019_measure_myeongdong.png) |
+| 2 | 10/19 | 질의 소요 시간 실측 | 우래옥 12회 측정 | [1019_measure_uraeok.png](../images/ai/1019_measure_uraeok.png) |
+| 3 | 10/19 | 질의 소요 시간 실측 | 실측 결과 표 | [1019_measure_result.png](../images/ai/1019_measure_result.png) |
+| 4 | 10/19 | 질문 생성 기능 | 지역 오타를 검사가 잡음 (실패) | [1019_questions_check_fail.png](../images/ai/1019_questions_check_fail.png) |
+| 5 | 10/19 | 질문 생성 기능 | 행복돈까스 질문 10개 (성공) | [1019_questions_success.png](../images/ai/1019_questions_success.png) |
+| 6 | 10/19 | 진단 전체 흐름 | 명동교자 진단 결과 | [1019_diagnosis_myeongdong.png](../images/ai/1019_diagnosis_myeongdong.png) |
+
+- 화면을 새로 찍으면 이 표 아래에 한 줄씩 추가합니다. 파일 이름은 `날짜_기능_내용.png` (영어·숫자만)
 
 - 화면을 새로 찍으면 이 표에 한 줄씩 추가합니다. 파일 이름은 `날짜_기능_내용.png` (영어·숫자만)
