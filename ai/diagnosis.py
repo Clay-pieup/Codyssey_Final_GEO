@@ -1,4 +1,4 @@
-"""진단 전체 흐름: 입력 확인 → 질문 생성 → 질의 → 답변 분석 → 집계 → 개선 제안 → 리포트.
+"""진단 전체 흐름: 입력 확인 → 질문 생성 → 질의 → 답변 분석 → 집계 → Agent 추가 질의 → 개선 제안 → 리포트.
 
 서버(팀장)는 run_diagnosis() 하나만 부르면 된다. 결과는 JSON으로 바꿀 수 있는 dict.
 근거: 기획서 3장, docs/질문세트_측정기준.md 4~8장
@@ -202,8 +202,15 @@ def summarize(store: str, answers: list[dict]) -> dict:
 
 # ---------------------------------------------------------------- 5. 개선 제안
 
-def suggest(store: str, dong: str, menus: list[str], summary: dict) -> list[dict]:
+def suggest(store: str, dong: str, menus: list[str], summary: dict, agent: dict | None = None) -> list[dict]:
     brief = {k: summary[k] for k in ("mention", "by_type", "rank", "descriptions", "competitors", "sources")}
+    if agent and agent.get("trace"):  # Agent 추가 질의에서 알게 된 것도 근거로 넘김
+        brief["agent_findings"] = [
+            {"질문 종류": t["tool_label"], "질문": t["question"], "고른 이유": t["why"],
+             "결과": f"{t['result']['mentioned']}/{t['result']['valid']} 언급",
+             "AI가 소개한 말": t["result"]["descriptions"], "함께 나온 가게": t["result"]["other_stores"]}
+            for t in agent["trace"]
+        ]
     prompt = load_prompt(
         "improvement", store_name=store, dong=dong, menus=", ".join(menus),
         summary=json.dumps(brief, ensure_ascii=False, indent=1),
@@ -236,7 +243,7 @@ def run_diagnosis(store: str, region: str, menus: list[str], station: str = "") 
         "notice": NOTICE,
         "settings": {"use_search": USE_SEARCH, "repeat": REPEAT, "concurrency": CONCURRENCY},
         "questions": [], "summary": None, "answers": [],
-        "agent": {"ran": False, "trace": []},  # 10/20 Agent 구현 시 채움
+        "agent": {"ran": False, "reason_to_run": "", "trace": []},
         "suggestions": [], "model": "", "elapsed_sec": 0,
     }
 
@@ -250,6 +257,7 @@ def run_diagnosis(store: str, region: str, menus: list[str], station: str = "") 
         report.update(error="질문을 만들지 못했어요. 잠시 후 다시 시도해 주세요.", problems=qs.problems)
         return _finish(report, started)
     report["questions"] = qs.questions
+    report["question_warnings"] = qs.warnings  # 질문 품질 경고 (예: 동 이름 6개 미만), 진단은 계속함
 
     answers = run_queries(qs.questions)
     if not any(a["status"] == "ok" for a in answers):
@@ -262,7 +270,11 @@ def run_diagnosis(store: str, region: str, menus: list[str], station: str = "") 
     summary = summarize(store, answers)
     summary["low_reliability"] = summary["mention"]["valid"] < len(answers) * 2 / 3  # 측정기준 4장: 정상 답변 2/3 미만
     report.update(summary=summary, answers=answers)
-    report["suggestions"] = suggest(store, qs.dong, menus, summary)
+
+    from ai.agent import run_agent  # 순환 import를 피하려고 여기서 불러옴
+    report["agent"] = run_agent(store, qs.dong, station.strip(), menus, summary, run_queries, analyze_question)
+
+    report["suggestions"] = suggest(store, qs.dong, menus, summary, report["agent"])
     report["ok"] = True
     return _finish(report, started)
 
@@ -302,7 +314,22 @@ def main() -> None:
         print(f"[AI가 소개하는 말] \"{d['text']}\" ({d['count']}회)")
     for c in s["competitors"]:
         print(f"[함께 나온 가게] {c['name']} - 답변 {c['answers']}개, 메뉴형 {c['menu_answers']} ({c['description']})")
+    ag = rep["agent"]
+    print(f"\n[Agent] {ag.get('reason_to_run', '')}")
+    for t in ag.get("trace", []):
+        r = t["result"]
+        print(f"  - {t['tool_label']}: \"{t['question']}\" → 언급 {r['mentioned']}/{r['valid']}")
+        print(f"    고른 이유: {t['why']}")
+        if r["descriptions"]:
+            print(f"    AI가 소개한 말: {r['descriptions'][0]}")
+    for sk in ag.get("skipped", []):
+        print(f"  (제외) {sk['tool']}: {sk['reason']}")
+    if ag.get("error"):
+        print(f"  (Agent 오류) {ag['error']}")
+
     print("\n[개선 제안]")
+    if not rep["suggestions"]:
+        print("  (개선 제안을 만들지 못했어요. 호출 한도에 걸렸을 수 있어요. 잠시 후 다시 실행해 보세요.)")
     for i, sg in enumerate(rep["suggestions"], 1):
         print(f"  {i}. {sg['title']}\n     {sg.get('detail', '')}\n     근거: {sg.get('evidence', '')}")
     print(f"\n※ {rep['notice']}")

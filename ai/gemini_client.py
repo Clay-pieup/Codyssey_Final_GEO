@@ -5,6 +5,7 @@
 """
 
 import os
+import re
 import threading
 import time
 from dataclasses import dataclass, field
@@ -25,6 +26,10 @@ DEFAULT_MODEL = "gemini-3.8-flash"
 # 호출 1회 시간 제한(초). 응답이 없을 때 끝없이 기다리지 않게 함
 # (10/19 실측: 3.8-flash 첫 호출이 2분 가까이 응답 없음)
 TIMEOUT_SEC = int(os.getenv("GEMINI_TIMEOUT_SEC", "60"))
+
+# 분당 호출 한도(429)에 걸렸을 때 기다렸다가 다시 시도할 횟수
+# (10/19: 무료 키 gemini-3.5-flash-lite는 분당 15회 → 진단 1회 중 Agent 단계에서 429 발생)
+RATE_LIMIT_RETRIES = int(os.getenv("GEMINI_RATE_LIMIT_RETRIES", "3"))
 
 _client = None  # 처음 호출할 때 한 번만 만들고 재사용
 _client_lock = threading.Lock()  # 동시 호출 때 연결 객체가 두 번 만들어지지 않게
@@ -60,6 +65,46 @@ class GeminiResult:
     error: str = ""               # 실패 이유
 
 
+def _rate_limit_wait(error: Exception) -> float | None:
+    """분당 호출 한도 초과(429)면 기다릴 초를 돌려준다. 다른 오류거나 기다려도 소용없는 한도면 None.
+
+    Google이 오류 안에 알려주는 retryDelay(예: '2s')를 쓰고, 없으면 5초.
+    "limit: 0"(무료 키에 그 기능 할당량 자체가 없음)은 기다려도 안 풀리므로 None.
+    """
+    text = str(error)
+    if "429" not in text and "RESOURCE_EXHAUSTED" not in text:
+        return None
+    if re.search(r"limit:\s*0\b", text) or "PerDay" in text:
+        return None
+    m = re.search(r"retryDelay['\"]?\s*:\s*['\"]?(\d+(?:\.\d+)?)s", text) or re.search(r"retry in (\d+(?:\.\d+)?)s", text)
+    wait = float(m.group(1)) + 1 if m else 5.0
+    return min(max(wait, 2.0), 30.0)
+
+
+def _call_with_retry(call, retries: int):
+    """call()을 실행하고, 실패하면 다시 시도한다.
+    - 분당 한도(429): Google이 알려준 시간만큼 기다렸다가 최대 RATE_LIMIT_RETRIES번
+    - 그 밖의 오류: 1초 쉬고 최대 retries번
+    성공하면 (결과, ""), 끝내 실패하면 (None, 마지막 오류 문장)
+    """
+    normal = limited = 0
+    while True:
+        try:
+            return call(), ""
+        except Exception as e:  # 네트워크 오류, 한도 초과 등
+            last_error = f"{type(e).__name__}: {e}"
+            wait = _rate_limit_wait(e)
+            if wait is not None and limited < RATE_LIMIT_RETRIES:
+                limited += 1
+                time.sleep(wait)
+                continue
+            if wait is None and normal < retries:
+                normal += 1
+                time.sleep(1)
+                continue
+            return None, last_error
+
+
 def ask_gemini(
     prompt: str,
     temperature: float | None = None,
@@ -86,27 +131,20 @@ def ask_gemini(
         config_args["response_mime_type"] = "application/json"
     config = types.GenerateContentConfig(**config_args)
 
-    last_error = ""
-    for attempt in range(retries + 1):
-        start = time.perf_counter()
-        try:
-            response = _get_client().models.generate_content(
-                model=model, contents=prompt, config=config
-            )
-            elapsed = time.perf_counter() - start
-            return GeminiResult(
-                ok=True,
-                model=model,
-                text=(response.text or "").strip(),
-                sources=_extract_sources(response),
-                elapsed=round(elapsed, 2),
-            )
-        except Exception as e:  # 네트워크 오류, 한도 초과 등
-            last_error = f"{type(e).__name__}: {e}"
-            if attempt < retries:
-                time.sleep(1)  # 잠깐 쉬고 다시 시도
-
-    return GeminiResult(ok=False, model=model, error=last_error)
+    start = time.perf_counter()
+    response, error = _call_with_retry(
+        lambda: _get_client().models.generate_content(model=model, contents=prompt, config=config),
+        retries,
+    )
+    if response is None:
+        return GeminiResult(ok=False, model=model, error=error)
+    return GeminiResult(
+        ok=True,
+        model=model,
+        text=(response.text or "").strip(),
+        sources=_extract_sources(response),
+        elapsed=round(time.perf_counter() - start, 2),  # 한도 대기 시간 포함
+    )
 
 
 def _extract_sources(response) -> list:
@@ -118,3 +156,54 @@ def _extract_sources(response) -> list:
         return [c.web.uri for c in meta.grounding_chunks if c.web and c.web.uri]
     except (AttributeError, IndexError, TypeError):
         return []
+
+
+@dataclass
+class ToolChoice:
+    """Gemini가 함수 호출(function calling)로 고른 도구 목록."""
+
+    ok: bool
+    calls: list = field(default_factory=list)  # [{"name": "도구 이름", "args": {...}}]
+    text: str = ""        # 도구 대신 글로 답한 경우의 내용
+    provider: str = PROVIDER
+    model: str = ""
+    elapsed: float = 0.0
+    error: str = ""
+
+
+def choose_tools(prompt: str, functions: list[dict], temperature: float = 0, retries: int = 1) -> ToolChoice:
+    """함수 목록을 Gemini에 주고, 어떤 함수를 어떤 값으로 부를지 Gemini가 고르게 한다 (AI Agent의 핵심).
+
+    functions: [{"name": ..., "description": ..., "parameters": JSON 스키마}]
+    - 함수를 실제로 실행하지는 않음. 고른 결과(이름과 값)만 돌려주고, 실행은 호출한 쪽(ai/agent.py)이 함
+    - mode="ANY": 반드시 함수 중 하나 이상을 고르게 함
+    """
+    model = os.getenv("GEMINI_MODEL") or DEFAULT_MODEL
+    declarations = [
+        types.FunctionDeclaration(
+            name=f["name"], description=f["description"], parameters_json_schema=f["parameters"]
+        )
+        for f in functions
+    ]
+    config = types.GenerateContentConfig(
+        temperature=temperature,
+        tools=[types.Tool(function_declarations=declarations)],
+        tool_config=types.ToolConfig(function_calling_config=types.FunctionCallingConfig(mode="ANY")),
+        automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+    )
+
+    start = time.perf_counter()
+    response, error = _call_with_retry(
+        lambda: _get_client().models.generate_content(model=model, contents=prompt, config=config),
+        retries,
+    )
+    if response is None:
+        return ToolChoice(ok=False, model=model, error=error)
+    calls = [{"name": c.name, "args": dict(c.args or {})} for c in (response.function_calls or [])]
+    text = ""
+    try:
+        text = (response.text or "").strip()
+    except (ValueError, AttributeError):
+        pass  # 함수 호출만 있는 응답은 text가 없을 수 있음
+    return ToolChoice(ok=True, calls=calls, text=text, model=model,
+                      elapsed=round(time.perf_counter() - start, 2))

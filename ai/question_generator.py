@@ -113,7 +113,7 @@ def generate_questions(store: str, region: str, menus: list[str], station: str =
     )
 
 
-def main() -> None:
+def main() -> None:오후 1:31 2026-10-19
     print("질문 생성 테스트 (실존·가상 가게 모두 가능)\n")
     store = input("상호 (예: 행복돈까스 망원점): ").strip()
     region = input("지역 (예: 서울 마포구 망원동): ").strip()
