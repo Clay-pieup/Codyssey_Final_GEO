@@ -2,30 +2,81 @@
 
 > AI 담당 작성 · 2026-10-19 · 제출물 ② 기능 요구 명세서의 "AI 활용 명세 + 기술 요소별 코드 위치"에 들어갈 내용
 > 팀장이 `docs/기능요구명세서.md`로 옮길 때 그대로 쓰거나 줄여서 쓰면 됩니다. 코드 위치는 10/23에 최종 확인합니다.
+> v2 (10/19 오후): 표를 한눈에 보기와 기능별 자세히로 나눔, Agent 코드 위치 반영
 
 ---
 
 ## 1. 기능별 AI 활용
 
-| ID | 기능 | AI 방식 | 입력 → 출력 | 동작 순서 | 코드 위치 |
-| --- | --- | --- | --- | --- | --- |
-| AI-1 | 입력 확인 | 규칙(코드) | 상호·지역·메뉴·역 → 통과 / 안내 문장 | 상호 1~30자, 지역에 "동" 포함, 메뉴 1~3개 검사 → 실패 시 AI 호출 없이 안내 | `ai/diagnosis.py` `check_input()` |
-| AI-2 | 질문 생성 | 생성형 AI (Gemini, JSON 출력) + 코드 검사 | 가게 정보 → 손님 질문 10개 | ① 동 이름 정리(`성수동2가→성수동`) ② 프롬프트로 질문 10개 생성 ③ 코드가 유형별 개수·상호 미포함·지역 포함 검사 ④ 실패 시 1회 재생성 | `ai/question_generator.py` `generate_questions()`, `check_questions()` / 프롬프트 `ai/prompts/question_generation.md` |
-| AI-3 | 답변 수집 | 생성형 AI (Gemini, 웹 검색) | 질문 10개 → 답변 30개 | 질문을 손님 문장 그대로 3회씩 질의, 동시 호출(기본 3개), 호출 1회 60초 제한, 실패·빈 답변·"정보 없음" 답변 구분 | `ai/diagnosis.py` `run_queries()` / 호출 `ai/gemini_client.py` `ask_gemini()` |
-| AI-4 | 답변 분석 | 생성형 AI (Gemini, JSON 출력) + 코드 판정 | 답변 원문 → 언급 여부·순위·묘사·함께 나온 가게 | ① 코드가 표기 통일 후 상호 포함 여부 판정 ② AI가 질문당 답변 3개를 한 번에 분석 ③ 최종값은 AI 판정, 코드와 다르면 불일치 기록 | `ai/diagnosis.py` `analyze_question()` / 프롬프트 `ai/prompts/answer_analysis.md` / 표기 통일 `ai/text_utils.py` |
-| AI-5 | 집계 | 규칙(코드) | 분석 결과 → 언급률·유형별 결과·평균 순위·경쟁 가게·출처 | 언급률 = 언급 답변 ÷ 정상 답변, 유형별 계산, 경쟁 가게 상위 3곳 | `ai/diagnosis.py` `summarize()` |
-| AI-6 | 추가 질의 판단 | **AI Agent** (Gemini 함수 호출) | 집계 결과 → 추가 질문 실행 + 판단 이유 | ① 언급률 30% 미만이면 Agent 실행 ② 질문 도구 3개(직접 지명형·경쟁 비교형·상황 세분형)를 함수로 제공 ③ Gemini가 호출할 도구를 골라 실행(최대 2개, 1회) ④ 고른 도구와 이유를 리포트에 기록 | `ai/agent.py` (10/20 구현 예정) |
-| AI-7 | 개선 제안 | 생성형 AI (Gemini, JSON 출력) | 집계 결과 → 개선안 3개(제목·할 일·근거) | 진단 요약을 근거로 사장님이 직접 할 수 있는 개선안 생성, 3개 미만이면 1회 재시도 | `ai/diagnosis.py` `suggest()` / 프롬프트 `ai/prompts/improvement.md` |
-| AI-8 | 진단 진입점 | (흐름 연결) | 가게 정보 → 리포트 dict(JSON) | AI-1 → AI-2 → AI-3 → AI-4 → AI-5 → AI-6 → AI-7 순서로 실행, 실패 시 사장님 안내 문장 반환 | `ai/diagnosis.py` `run_diagnosis()` / 입출력 명세 [`docs/AI_진단_입출력.md`](AI_진단_입출력.md) |
+### 1-1. 한눈에 보기
 
+| ID | 기능 | AI 방식 | 코드 위치 |
+| --- | --- | --- | --- |
+| AI-1 | 입력 확인 | 규칙(코드) | `ai/diagnosis.py` |
+| AI-2 | 질문 생성 | 생성형 AI + 코드 검사 | `ai/question_generator.py` |
+| AI-3 | 답변 수집 | 생성형 AI (웹 검색) | `ai/diagnosis.py`, `ai/gemini_client.py` |
+| AI-4 | 답변 분석 | 생성형 AI + 코드 판정 | `ai/diagnosis.py`, `ai/text_utils.py` |
+| AI-5 | 집계 | 규칙(코드) | `ai/diagnosis.py` |
+| AI-6 | 추가 질의 판단 | **AI Agent** (함수 호출) | `ai/agent.py` |
+| AI-7 | 개선 제안 | 생성형 AI | `ai/diagnosis.py` |
+| AI-8 | 진단 진입점 | 흐름 연결 | `ai/diagnosis.py` |
+
+- 실행 순서: AI-1 → AI-2 → AI-3 → AI-4 → AI-5 → AI-6 → AI-7 (AI-8이 순서대로 부름)
 - 모든 Gemini 호출은 `ai/gemini_client.py` 한 곳을 거침 → 모델 교체·ChatGPT·Claude 추가 시 이 파일만 수정 (기획서 4-1)
 - 프롬프트는 코드 밖 파일(`ai/prompts/`)로 분리, 바꿀 때마다 이유를 [`ai/prompts/CHANGELOG.md`](../ai/prompts/CHANGELOG.md)에 기록
+
+### 1-2. 기능별 자세히
+
+**AI-1 입력 확인**
+- 입력 → 출력: 상호·지역·메뉴·역 → 통과 또는 안내 문장
+- 동작: 상호 1자 이상 30자 이하, 지역에 "동" 포함, 메뉴 1개 이상 3개 이하인지 검사 → 실패하면 AI를 부르지 않고 안내 문장을 돌려줌
+- 코드: `ai/diagnosis.py` `check_input()`
+
+**AI-2 질문 생성**
+- 입력 → 출력: 가게 정보 → 손님 질문 10개
+- 동작: ① 동 이름 정리 (`성수동2가` → `성수동`) ② 프롬프트로 질문 10개 생성 (Gemini, JSON 출력) ③ 코드가 유형별 개수·상호 미포함·지역 포함 검사 ④ 실패하면 1회 재생성
+- 코드: `ai/question_generator.py` `generate_questions()`, `check_questions()`
+- 프롬프트: `ai/prompts/question_generation.md`
+
+**AI-3 답변 수집**
+- 입력 → 출력: 질문 10개 → 답변 30개
+- 동작: 질문을 손님 문장 그대로 3회씩 질의 (Gemini, 웹 검색). 동시 호출 기본 3개, 호출 1회 60초 제한. 실패·빈 답변·"정보 없음" 답변을 구분해 언급률 분모에서 제외
+- 코드: `ai/diagnosis.py` `run_queries()`, 호출은 `ai/gemini_client.py` `ask_gemini()`
+
+**AI-4 답변 분석**
+- 입력 → 출력: 답변 원문 → 언급 여부·순위·묘사·함께 나온 가게
+- 동작: ① 코드가 표기를 통일한 뒤 상호 포함 여부 판정 ② AI가 질문당 답변 3개를 한 번에 분석 (Gemini, JSON 출력) ③ 최종값은 AI 판정, 코드 판정과 다르면 불일치로 기록
+- 코드: `ai/diagnosis.py` `analyze_question()`, 표기 통일은 `ai/text_utils.py`
+- 프롬프트: `ai/prompts/answer_analysis.md`
+
+**AI-5 집계**
+- 입력 → 출력: 분석 결과 → 언급률·유형별 결과·평균 순위·경쟁 가게·출처
+- 동작: 언급률 = 언급된 답변 수 ÷ 정상 답변 수. 유형별로도 계산하고, 함께 나온 가게 상위 3곳을 뽑음
+- 코드: `ai/diagnosis.py` `summarize()`
+
+**AI-6 추가 질의 판단 (AI Agent)**
+- 입력 → 출력: 집계 결과 → 추가 질문 실행 결과와 판단 이유
+- 동작: ① 언급률이 30% 미만이면 실행 ② 질문 도구 3개(직접 지명형·경쟁 비교형·상황 세분형)를 각각 함수로 Gemini에 제공 ③ Gemini가 함수 호출로 1개 또는 2개를 골라 질문 문장과 이유를 채움 ④ 코드가 규칙 검사 후 실행 (추가 질의 1회) ⑤ 고른 도구·이유·결과를 리포트 `agent` 칸에 기록
+- 코드: `ai/agent.py` `run_agent()`, 함수 호출은 `ai/gemini_client.py` `choose_tools()`
+- 프롬프트: `ai/prompts/agent_decision.md`
+
+**AI-7 개선 제안**
+- 입력 → 출력: 집계 결과와 Agent 결과 → 개선안 3개 (제목·할 일·근거)
+- 동작: 진단 결과 안의 숫자·가게 이름만 근거로 사장님이 직접 할 수 있는 개선안 생성 (Gemini, JSON 출력). 3개가 안 나오면 1회 재시도
+- 코드: `ai/diagnosis.py` `suggest()`
+- 프롬프트: `ai/prompts/improvement.md`
+
+**AI-8 진단 진입점**
+- 입력 → 출력: 가게 정보 → 리포트 (JSON으로 바꿀 수 있는 dict)
+- 동작: AI-1부터 AI-7까지 순서대로 실행. 실패하면 사장님께 보여줄 안내 문장을 돌려줌
+- 코드: `ai/diagnosis.py` `run_diagnosis()`
+- 입출력 명세: [`docs/AI_진단_입출력.md`](AI_진단_입출력.md)
 
 ## 2. 필수 기술 요소별 코드 위치 (평가기준 G3)
 
 | 기술 요소 | 인정 조건 (G3) | 우리 구현 | 코드 위치 | 평가자 확인 방법 |
 | --- | --- | --- | --- | --- |
-| AI Agent | LLM이 2개 이상의 도구·함수 중 호출 대상을 스스로 정함 | 질문 도구 3개를 각각 함수로 정의하고 Gemini 함수 호출로 AI가 선택·실행, 선택 이유 기록 | `ai/agent.py` (10/20 구현 예정) | 언급률이 낮은 가게로 진단 → 리포트의 "추가 진단" 칸에 고른 질문 종류와 이유가 표시됨 |
+| AI Agent | LLM이 2개 이상의 도구·함수 중 호출 대상을 스스로 정함 | 질문 도구 3개를 각각 함수로 정의하고 Gemini 함수 호출로 AI가 선택·실행, 선택 이유 기록 | `ai/agent.py` `TOOLS`, `run_agent()` / `ai/gemini_client.py` `choose_tools()` | 언급률이 낮은 가게로 진단 → 리포트의 "추가 진단" 칸에 고른 질문 종류와 이유가 표시됨 |
 | 자동화 워크플로우 | 이벤트로 시작해 2개 이상 서비스가 사람 개입 없이 이어짐 | 진단 완료 웹훅 → Make → Gmail 발송 + 구글 시트 기록 | (화면·배포 담당) `automation/make_scenario.json` | (화면·배포 담당 작성) |
 
 ## 3. AI 설정 근거
