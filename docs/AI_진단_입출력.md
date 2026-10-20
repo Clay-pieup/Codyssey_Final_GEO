@@ -67,7 +67,7 @@ report = run_diagnosis(
 | `summary.low_reliability` | 정상 답변이 2/3 미만이면 true → 화면에 "결과 신뢰도 낮음" 표시 권장 |
 | `answers` | 답변 원문과 분석 (질문 × 반복 수만큼). 구글 시트 `진단결과` 기록용 |
 | `agent` | Agent 추가 진단 결과 (아래 5장) |
-| `more_available` | true면 화면에 **"더 자세히 진단하기" 버튼** 표시 (자동 추가 질의를 안 한 리포트만 true) |
+| `more_available` | true면 화면에 **"더 자세히 진단하기" 버튼** 표시. Agent 결과(`agent.trace`)가 없는 리포트면 true → 언급률이 높아 자동 추가 질의를 안 한 경우 + 자동 추가 질의가 한도 초과 등으로 실패한 경우 |
 | `question_warnings` | 질문 품질 경고 목록 (예: "동 이름이 들어간 질문이 6개 미만"). 진단은 정상 진행, 화면 표시는 안 해도 됨 |
 | `suggestions` | 개선 제안 3개 `[{"title": "…", "detail": "…", "evidence": "…"}]` |
 
@@ -145,6 +145,7 @@ report = run_diagnosis(
 | `error` | 도구 선택 실패 등 (빈 문자열이면 정상) |
 
 - 언급률이 30% 이상이면 `{"ran": false, "trigger": "", "reason_to_run": "언급률 90% ≥ 기준 30% → 추가 질의 안 함", "trace": [], …}` + 리포트 `more_available: true`
+- 자동 추가 질의가 실패하면(예: 429로 도구 선택 실패) `{"ran": true, "trace": [], "error": "…"}` + 리포트 `more_available: true` → 버튼으로 다시 시도
 
 ## 6. Make에 넘길 때 추천 필드
 
@@ -170,7 +171,7 @@ report2 = run_more(report)   # report: run_diagnosis()가 돌려준 리포트를
 ```
 
 - 왜 리포트를 다시 받나: Vercel 서버는 요청마다 새로 시작해 1차 결과를 기억하지 못함 → 화면이 가진 1차 리포트(JSON)를 다시 보내면 Agent만 실행
-- 버튼 표시 조건: 리포트의 `more_available`이 true일 때 (자동 추가 질의를 안 한 리포트)
+- 버튼 표시 조건: 리포트의 `more_available`이 true일 때 (Agent 결과가 없는 리포트: 자동 추가 질의를 안 했거나 실패함)
 - 하는 일: 언급률과 관계없이 Agent 실행(`agent.trigger: "button"`) → Agent 결과까지 넣어 개선 제안을 다시 만듦
 - 돌려주는 값: 받은 리포트에 `agent`, `suggestions`가 새로 채워진 **리포트 전체** → 화면은 이 리포트로 그대로 다시 그리면 됨. Make 메일도 이 리포트로 보내면 추가 진단 결과까지 들어감
 - 추가로 생기는 칸: `more_error`(실패 시 사장님께 보여줄 한 줄, 정상이면 `""`), `more_elapsed_sec`(버튼 실행에 걸린 시간)

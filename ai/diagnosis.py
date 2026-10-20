@@ -248,7 +248,7 @@ def run_diagnosis(store: str, region: str, menus: list[str], station: str = "") 
         "settings": {"use_search": USE_SEARCH, "repeat": REPEAT, "concurrency": CONCURRENCY},
         "questions": [], "summary": None, "answers": [],
         "agent": {"ran": False, "trigger": "", "reason_to_run": "", "trace": [], "skipped": [], "model": "", "error": ""},
-        "more_available": False,  # true면 화면에 "더 자세히 진단하기" 버튼 표시
+        "more_available": False,  # true면 화면에 "더 자세히 진단하기" 버튼 표시 (Agent 결과가 없을 때)
         "suggestions": [], "model": current_model(), "elapsed_sec": 0,
     }
 
@@ -277,7 +277,8 @@ def run_diagnosis(store: str, region: str, menus: list[str], station: str = "") 
     report.update(summary=summary, answers=answers)
 
     report["agent"] = run_agent(store, qs.dong, station.strip(), menus, summary, run_queries, analyze_question)
-    report["more_available"] = not report["agent"]["ran"]  # 자동 추가 질의를 안 한 리포트에만 버튼 (기획서 3-1)
+    # 자동 추가 질의 결과가 없으면(안 했거나, 429 등으로 실패) 버튼 표시 → 실패해도 버튼으로 다시 시도 가능
+    report["more_available"] = not report["agent"]["trace"]
 
     report["suggestions"] = suggest(store, qs.dong, menus, summary, report["agent"])
     report["ok"] = True
