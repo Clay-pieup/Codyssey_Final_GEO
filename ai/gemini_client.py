@@ -31,6 +31,11 @@ TIMEOUT_SEC = int(os.getenv("GEMINI_TIMEOUT_SEC", "60"))
 # (10/19: 무료 키 gemini-3.5-flash-lite는 분당 15회 → 진단 1회 중 Agent 단계에서 429 발생)
 RATE_LIMIT_RETRIES = int(os.getenv("GEMINI_RATE_LIMIT_RETRIES", "3"))
 
+def current_model() -> str:
+    """지금 쓰는 모델 이름 (.env 의 GEMINI_MODEL, 없으면 DEFAULT_MODEL). 리포트 model 칸에도 이 값을 씀."""
+    return os.getenv("GEMINI_MODEL") or DEFAULT_MODEL
+
+
 _client = None  # 처음 호출할 때 한 번만 만들고 재사용
 _client_lock = threading.Lock()  # 동시 호출 때 연결 객체가 두 번 만들어지지 않게
 
@@ -120,7 +125,7 @@ def ask_gemini(
                  (웹 검색과 JSON 강제를 함께 쓰지 않음 — 질의 단계는 자유 문장이 필요)
     retries    : 실패 시 다시 시도할 횟수 (측정기준 4장: 1회)
     """
-    model = os.getenv("GEMINI_MODEL") or DEFAULT_MODEL
+    model = current_model()
 
     config_args = {}
     if temperature is not None:
@@ -178,7 +183,7 @@ def choose_tools(prompt: str, functions: list[dict], temperature: float = 0, ret
     - 함수를 실제로 실행하지는 않음. 고른 결과(이름과 값)만 돌려주고, 실행은 호출한 쪽(ai/agent.py)이 함
     - mode="ANY": 반드시 함수 중 하나 이상을 고르게 함
     """
-    model = os.getenv("GEMINI_MODEL") or DEFAULT_MODEL
+    model = current_model()
     declarations = [
         types.FunctionDeclaration(
             name=f["name"], description=f["description"], parameters_json_schema=f["parameters"]
@@ -200,10 +205,12 @@ def choose_tools(prompt: str, functions: list[dict], temperature: float = 0, ret
     if response is None:
         return ToolChoice(ok=False, model=model, error=error)
     calls = [{"name": c.name, "args": dict(c.args or {})} for c in (response.function_calls or [])]
+    # response.text를 쓰면 함수 호출만 있는 응답에서 SDK 경고가 뜨므로 글자 부분만 직접 꺼냄
     text = ""
     try:
-        text = (response.text or "").strip()
-    except (ValueError, AttributeError):
-        pass  # 함수 호출만 있는 응답은 text가 없을 수 있음
+        parts = response.candidates[0].content.parts or []
+        text = "".join(p.text for p in parts if getattr(p, "text", None)).strip()
+    except (IndexError, AttributeError, TypeError):
+        pass
     return ToolChoice(ok=True, calls=calls, text=text, model=model,
                       elapsed=round(time.perf_counter() - start, 2))

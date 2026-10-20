@@ -15,6 +15,9 @@ from pathlib import Path
 
 from ai.gemini_client import ask_gemini
 
+# 진단 1회 최대 호출 수 (10/20 정정: 질의만 센 36회 → 전체 51회). docs/AI_활용명세.md 3-1
+CALLS_PER_DIAGNOSIS = 51
+
 REPEAT = 2  # 질문·모드마다 반복 횟수
 RESULT_PATH = Path("docs/작업기록/실측결과.md")
 
@@ -67,17 +70,17 @@ def summarize(rows: list[dict]) -> str:
     lines.append(f"## 실측 {datetime.now():%m/%d %H:%M} · 모델 {model}\n")
 
     lines.append("### 1. 질의 1회 소요 시간\n")
-    lines.append("| 웹 검색 | 성공/전체 | 평균(초) | 최대(초) | 36회 순차 예상(초) |")
+    lines.append(f"| 웹 검색 | 성공/전체 | 평균(초) | 최대(초) | {CALLS_PER_DIAGNOSIS}회 순차 예상(초) |")
     lines.append("| --- | :-: | :-: | :-: | :-: |")
     for s in (False, True):
         part = [r for r in rows if r["search"] == s]
         ok = [r["elapsed"] for r in part if r["ok"]]
         if ok:
             avg, mx = statistics.mean(ok), max(ok)
-            lines.append(f"| {'켬' if s else '끔'} | {len(ok)}/{len(part)} | {avg:.1f} | {mx:.1f} | {avg * 36:.0f} |")
+            lines.append(f"| {'켬' if s else '끔'} | {len(ok)}/{len(part)} | {avg:.1f} | {mx:.1f} | {avg * CALLS_PER_DIAGNOSIS:.0f} |")
         else:
             lines.append(f"| {'켬' if s else '끔'} | 0/{len(part)} | - | - | - |")
-    lines.append("\n- Vercel 실행 1회 제한 300초. 36회 순차 예상이 300초를 넘으면 동시 호출 필요\n")
+    lines.append(f"\n- Vercel 실행 1회 제한 300초. 진단 1회 최대 {CALLS_PER_DIAGNOSIS}회(질문 생성 1 + 질의 30 + 분석 10 + Agent 선택 1 + 추가 질의 6 + 추가 분석 2 + 제안 1)를 순차로 보낸 예상이 300초를 넘으면 동시 호출 필요\n")
 
     lines.append("### 2. 웹 검색 켬/끔 언급 비교\n")
     lines.append("| 가게 | 질문 | 끔: 언급/성공 | 켬: 언급/성공 | 켬: 평균 출처 수 |")

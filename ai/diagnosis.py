@@ -1,6 +1,9 @@
 """진단 전체 흐름: 입력 확인 → 질문 생성 → 질의 → 답변 분석 → 집계 → Agent 추가 질의 → 개선 제안 → 리포트.
 
-서버(팀장)는 run_diagnosis() 하나만 부르면 된다. 결과는 JSON으로 바꿀 수 있는 dict.
+서버(팀장)가 부르는 함수 2개. 결과는 둘 다 JSON으로 바꿀 수 있는 dict(리포트).
+- run_diagnosis(): 진단 1회. 언급률 30% 미만이면 Agent 추가 질의까지 자동 실행
+- run_more(report): "더 자세히 진단하기" 버튼. 1차 리포트를 그대로 받아 Agent 추가 질의만 실행
+  (Vercel은 요청마다 새로 시작해 1차 결과를 기억하지 못하므로 화면이 리포트를 다시 보냄)
 근거: 기획서 3장, docs/질문세트_측정기준.md 4~8장
 
 혼자 실행해 보기 (프로젝트 맨 위 폴더에서):
@@ -20,7 +23,8 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlparse
 
-from ai.gemini_client import ask_gemini
+from ai.agent import run_agent
+from ai.gemini_client import ask_gemini, current_model
 from ai.prompt_loader import load_prompt
 from ai.question_generator import TYPE_COUNTS, generate_questions
 from ai.text_utils import extract_dong, normalize, store_key
@@ -203,7 +207,7 @@ def summarize(store: str, answers: list[dict]) -> dict:
 # ---------------------------------------------------------------- 5. 개선 제안
 
 def suggest(store: str, dong: str, menus: list[str], summary: dict, agent: dict | None = None) -> list[dict]:
-    brief = {k: summary[k] for k in ("mention", "by_type", "rank", "descriptions", "competitors", "sources")}
+    brief = {k: summary.get(k) for k in ("mention", "by_type", "rank", "descriptions", "competitors", "sources")}
     if agent and agent.get("trace"):  # Agent 추가 질의에서 알게 된 것도 근거로 넘김
         brief["agent_findings"] = [
             {"질문 종류": t["tool_label"], "질문": t["question"], "고른 이유": t["why"],
@@ -243,8 +247,9 @@ def run_diagnosis(store: str, region: str, menus: list[str], station: str = "") 
         "notice": NOTICE,
         "settings": {"use_search": USE_SEARCH, "repeat": REPEAT, "concurrency": CONCURRENCY},
         "questions": [], "summary": None, "answers": [],
-        "agent": {"ran": False, "reason_to_run": "", "trace": []},
-        "suggestions": [], "model": "", "elapsed_sec": 0,
+        "agent": {"ran": False, "trigger": "", "reason_to_run": "", "trace": [], "skipped": [], "model": "", "error": ""},
+        "more_available": False,  # true면 화면에 "더 자세히 진단하기" 버튼 표시
+        "suggestions": [], "model": current_model(), "elapsed_sec": 0,
     }
 
     problems = check_input(store, region, menus, station)
@@ -271,8 +276,8 @@ def run_diagnosis(store: str, region: str, menus: list[str], station: str = "") 
     summary["low_reliability"] = summary["mention"]["valid"] < len(answers) * 2 / 3  # 측정기준 4장: 정상 답변 2/3 미만
     report.update(summary=summary, answers=answers)
 
-    from ai.agent import run_agent  # 순환 import를 피하려고 여기서 불러옴
     report["agent"] = run_agent(store, qs.dong, station.strip(), menus, summary, run_queries, analyze_question)
+    report["more_available"] = not report["agent"]["ran"]  # 자동 추가 질의를 안 한 리포트에만 버튼 (기획서 3-1)
 
     report["suggestions"] = suggest(store, qs.dong, menus, summary, report["agent"])
     report["ok"] = True
@@ -281,11 +286,93 @@ def run_diagnosis(store: str, region: str, menus: list[str], station: str = "") 
 
 def _finish(report: dict, started: float) -> dict:
     report["elapsed_sec"] = round(time.perf_counter() - started, 1)
-    report["model"] = os.getenv("GEMINI_MODEL") or "기본값"
+    report["model"] = current_model()  # 실제 모델 이름 (예: gemini-3.5-flash-lite)
     return report
 
 
+# ---------------------------------------------------------------- 7. "더 자세히 진단하기" 버튼
+
+def run_more(report: dict) -> dict:
+    """1차 리포트를 받아 Agent 추가 질의만 실행하고, agent·suggestions를 채운 리포트를 돌려준다.
+
+    - 화면이 run_diagnosis()에서 받은 리포트를 그대로 다시 보내면 됨 (서버는 1차 결과를 기억하지 않음)
+    - 언급률과 관계없이 실행. 추가 질의는 진단 1회당 1번 → 이미 추가 질의를 한 리포트면 실행하지 않음
+    - 실패해도 1차 결과는 그대로 두고 more_error에 사장님께 보여줄 문장을 넣어 돌려줌
+    - 호출 수: 도구 선택 1 + 추가 질의 최대 6 + 추가 분석 최대 2 + 개선 제안 1 = 최대 10회
+    """
+    started = time.perf_counter()
+    if not isinstance(report, dict):
+        return {"ok": False, "error": "진단 결과 형식이 올바르지 않아요.", "problems": [], "more_error": "진단 결과 형식이 올바르지 않아요."}
+    new = dict(report)  # 받은 리포트는 건드리지 않고 복사본을 고쳐서 돌려줌
+    new["more_error"] = ""
+
+    def fail(message: str) -> dict:
+        new["more_error"] = message
+        return new
+
+    if not report.get("ok"):
+        return fail("먼저 진단을 끝까지 실행해 주세요.")
+    if (report.get("agent") or {}).get("trace"):
+        new["more_available"] = False
+        return fail("이미 추가 진단을 했어요. 다시 보려면 새로 진단해 주세요.")
+
+    inp = report.get("input") or {}
+    store = str(inp.get("store", ""))
+    region = str(inp.get("region", ""))
+    station = str(inp.get("station", "") or "")
+    menus = [str(m) for m in (inp.get("menus") or []) if str(m).strip()]
+    summary = report.get("summary")
+    if check_input(store, region, menus, station) or not _summary_ok(summary):
+        return fail("진단 결과가 올바르지 않아요. 새로 진단해 주세요.")
+
+    dong = extract_dong(region)
+    agent = run_agent(store, dong, station.strip(), menus, summary, run_queries, analyze_question, force=True)
+    new["agent"] = agent
+    if agent["trace"]:
+        new["more_available"] = False
+        suggestions = suggest(store, dong, menus, summary, agent)  # Agent 결과까지 넣어 제안을 다시 만듦
+        if suggestions:
+            new["suggestions"] = suggestions
+    else:  # 추가 질의를 하나도 못 함 → 버튼을 다시 눌러 볼 수 있게 둠
+        new["more_available"] = True
+        new["more_error"] = "추가 진단을 하지 못했어요. 잠시 후 다시 눌러 주세요."
+    new["model"] = current_model()
+    new["more_elapsed_sec"] = round(time.perf_counter() - started, 1)
+    return new
+
+
+def _summary_ok(summary) -> bool:
+    """화면이 보낸 리포트의 summary가 Agent 실행에 필요한 모양인지 확인한다."""
+    if not isinstance(summary, dict):
+        return False
+    mention = summary.get("mention")
+    if not isinstance(mention, dict) or not isinstance(mention.get("rate"), (int, type(None))):
+        return False
+    return all(k in summary for k in ("by_type", "rank", "descriptions", "competitors"))
+
+
 # ---------------------------------------------------------------- 혼자 실행
+
+def _print_agent_and_suggestions(rep: dict) -> None:
+    ag = rep["agent"]
+    print(f"\n[Agent] {ag.get('reason_to_run', '')}")
+    for t in ag.get("trace", []):
+        r = t["result"]
+        print(f"  - {t['tool_label']}: \"{t['question']}\" → 언급 {r['mentioned']}/{r['valid']}")
+        print(f"    고른 이유: {t['why']}")
+        if r["descriptions"]:
+            print(f"    AI가 소개한 말: {r['descriptions'][0]}")
+    for sk in ag.get("skipped", []):
+        print(f"  (제외) {sk['tool']}: {sk['reason']}")
+    if ag.get("error"):
+        print(f"  (Agent 오류) {ag['error']}")
+
+    print("\n[개선 제안]")
+    if not rep["suggestions"]:
+        print("  (개선 제안을 만들지 못했어요. 호출 한도에 걸렸을 수 있어요. 잠시 후 다시 실행해 보세요.)")
+    for i, sg in enumerate(rep["suggestions"], 1):
+        print(f"  {i}. {sg['title']}\n     {sg.get('detail', '')}\n     근거: {sg.get('evidence', '')}")
+
 
 def main() -> None:
     print("진단 전체 실행 테스트")
@@ -314,25 +401,17 @@ def main() -> None:
         print(f"[AI가 소개하는 말] \"{d['text']}\" ({d['count']}회)")
     for c in s["competitors"]:
         print(f"[함께 나온 가게] {c['name']} - 답변 {c['answers']}개, 메뉴형 {c['menu_answers']} ({c['description']})")
-    ag = rep["agent"]
-    print(f"\n[Agent] {ag.get('reason_to_run', '')}")
-    for t in ag.get("trace", []):
-        r = t["result"]
-        print(f"  - {t['tool_label']}: \"{t['question']}\" → 언급 {r['mentioned']}/{r['valid']}")
-        print(f"    고른 이유: {t['why']}")
-        if r["descriptions"]:
-            print(f"    AI가 소개한 말: {r['descriptions'][0]}")
-    for sk in ag.get("skipped", []):
-        print(f"  (제외) {sk['tool']}: {sk['reason']}")
-    if ag.get("error"):
-        print(f"  (Agent 오류) {ag['error']}")
+    _print_agent_and_suggestions(rep)
 
-    print("\n[개선 제안]")
-    if not rep["suggestions"]:
-        print("  (개선 제안을 만들지 못했어요. 호출 한도에 걸렸을 수 있어요. 잠시 후 다시 실행해 보세요.)")
-    for i, sg in enumerate(rep["suggestions"], 1):
-        print(f"  {i}. {sg['title']}\n     {sg.get('detail', '')}\n     근거: {sg.get('evidence', '')}")
-    print(f"\n※ {rep['notice']}")
+    if rep.get("more_available"):
+        yn = input("\n'더 자세히 진단하기' 버튼을 눌러 볼까요? (y/N): ").strip().lower()
+        if yn == "y":
+            rep = run_more(rep)
+            print(f"\n[더 자세히 진단하기] {rep.get('more_elapsed_sec', 0)}초")
+            if rep.get("more_error"):
+                print(f"  {rep['more_error']}")
+            _print_agent_and_suggestions(rep)
+    print(f"\n※ {rep['notice']}  (모델: {rep['model']})")
 
     out = "last_diagnosis.json"
     with open(out, "w", encoding="utf-8") as f:

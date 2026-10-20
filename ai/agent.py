@@ -4,6 +4,8 @@
 - 질문 도구 3개를 각각 함수로 정의 → Gemini 함수 호출(function calling)로 AI가 1~2개를 고름
 - 고른 도구로 질문을 실제로 던지고(반복 REPEAT회), 결과를 분석해 판단 이유와 함께 기록
 - 추가 질의는 1회(판단 1번)로 제한 → 호출 수와 시간이 늘어나는 것을 막음 (기획서 3-1)
+- 실행 조건: 언급률 30% 미만이면 자동(trigger="auto"), 사장님이 "더 자세히 진단하기"를 누르면 언급률과 관계없이(trigger="button")
+  → 할지 말지는 규칙(또는 사장님)이 정하고, 무엇을 물을지만 AI가 정함 (기획서 v0.8 3-1)
 
 혼자 실행해 보기:  python -m ai.diagnosis  (언급률이 30% 미만인 가게를 넣으면 Agent가 실행됨)
 """
@@ -82,20 +84,26 @@ def _check_call(name: str, question: str, store: str, dong: str, station: str) -
 
 
 def run_agent(store: str, dong: str, station: str, menus: list[str], summary: dict,
-              run_queries, analyze_question) -> dict:
+              run_queries, analyze_question, force: bool = False) -> dict:
     """언급률을 보고 Agent를 실행할지 정하고, 실행하면 AI가 고른 도구로 추가 질의를 한다.
 
     run_queries, analyze_question: ai/diagnosis.py의 함수를 받아 그대로 사용 (질의·분석 방식 통일)
+    force=True: "더 자세히 진단하기" 버튼 → 언급률과 관계없이 실행 (ai/diagnosis.py run_more())
     """
     rate = summary["mention"]["rate"]
-    if rate is not None and rate >= THRESHOLD:
-        return {"ran": False, "reason_to_run": f"언급률 {rate}% ≥ 기준 {THRESHOLD}% → 추가 질의 안 함",
-                "trace": [], "skipped": []}
+    if not force and rate is not None and rate >= THRESHOLD:
+        return {"ran": False, "trigger": "",
+                "reason_to_run": f"언급률 {rate}% ≥ 기준 {THRESHOLD}% → 추가 질의 안 함",
+                "trace": [], "skipped": [], "model": "", "error": ""}
 
-    agent = {"ran": True, "reason_to_run": f"언급률 {rate}% < 기준 {THRESHOLD}% → 추가 질의 실행",
+    if force:
+        reason = f"사장님이 '더 자세히 진단하기'를 눌러 실행 (언급률 {rate}%)"
+    else:
+        reason = f"언급률 {rate}% < 기준 {THRESHOLD}% → 추가 질의 실행"
+    agent = {"ran": True, "trigger": "button" if force else "auto", "reason_to_run": reason,
              "trace": [], "skipped": [], "model": "", "error": ""}
 
-    brief = {k: summary[k] for k in ("mention", "by_type", "rank", "descriptions", "competitors")}
+    brief = {k: summary.get(k) for k in ("mention", "by_type", "rank", "descriptions", "competitors")}
     prompt = load_prompt(
         "agent_decision", store_name=store, dong=dong, station=station or "없음",
         menus=", ".join(menus), summary=json.dumps(brief, ensure_ascii=False, indent=1),
