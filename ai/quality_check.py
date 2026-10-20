@@ -18,6 +18,7 @@ from datetime import datetime
 from pathlib import Path
 
 from ai.diagnosis import CONCURRENCY, REPEAT, USE_SEARCH, run_diagnosis, run_more
+from ai.gemini_client import current_model
 
 RUNS = 3  # 평가기준 G4: 3회 시도 중 2회 이상
 OUT = Path(__file__).resolve().parent.parent / "docs" / "작업기록" / "품질점검.md"
@@ -33,7 +34,8 @@ CASES = {
 def check_must1(rep: dict) -> str:
     """Must ① 기대 결과를 못 맞춘 이유. 맞으면 빈 문자열."""
     if not rep.get("ok"):
-        return f"진단 실패: {rep.get('error')}"
+        detail = next((str(p) for p in rep.get("problems", []) if p), "")  # 시간 초과·한도 초과 등 원인
+        return f"진단 실패: {rep.get('error')}" + (f" ({detail[:60]})" if detail else "")
     if len(rep.get("questions", [])) != 10:
         return "질문이 10개가 아님"
     if rep["summary"]["mention"]["rate"] is None:
@@ -136,7 +138,9 @@ def main() -> None:
             "station": input("가까운 역 (없으면 Enter): ").strip(),
             "menus": [m.strip() for m in input("대표 메뉴 1~3개, 쉼표로 구분: ").split(",") if m.strip()],
         }
-    print(f"설정: 웹 검색 {'켬' if USE_SEARCH else '끔'} / 반복 {REPEAT}회 / 동시 {CONCURRENCY}개")
+    print(f"설정: 모델 {current_model()} / 웹 검색 {'켬' if USE_SEARCH else '끔'} / 반복 {REPEAT}회 / 동시 {CONCURRENCY}개")
+    if current_model() == "gemini-3.8-flash" and not USE_SEARCH:
+        print("  참고: 3.8-flash는 호출 1번에 17초 정도 걸려 무료 키 점검에는 느립니다. .env 에 GEMINI_MODEL=gemini-3.5-flash-lite 권장")
 
     rows = run_case(case)
     md = to_markdown(case, rows)
