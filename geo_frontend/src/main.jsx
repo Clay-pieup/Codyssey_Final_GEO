@@ -31,14 +31,24 @@ consent: false
       setError("상호, 지역, 대표 메뉴를 모두 입력해 주세요.");
       return;
     }
+     const menus = form.menu
+      .split(",")
+      .map((menu) => menu.trim())
+      .filter(Boolean);
+
+     if (menus.length < 1 || menus.length > 3) {
+       setError("대표 메뉴는 쉼표(,)로 구분하여 1~3개 입력해 주세요.");
+       return;
+    }
+
     if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-  setError("이메일 주소를 확인해 주세요.");
-  return;
+      setError("이메일 주소를 확인해 주세요.");
+      return;
     }
     
     if (form.email.trim() && !form.consent) {
-  setError("이메일로 결과를 받으려면 개인정보 수집·이용에 동의해 주세요.");
-  return;
+       setError("이메일로 결과를 받으려면 개인정보 수집·이용에 동의해 주세요.");
+       return;
     }
     
         setShowResult(true);
@@ -110,7 +120,7 @@ consent: false
               <div className="intro-column">
                 <div className="section-kicker">START YOUR CHECKUP</div>
                 <h2>우리 가게 정보 입력</h2>
-                <p className="section-desc">아래 네 가지 정보를 입력해 주세요.<br />진단 결과는 입력하신 이메일로 보내드릴 예정입니다.</p>
+                <p className="section-desc">매장 정보를 입력해 주세요.<br />이메일을 입력하고 개인정보 수집·이용에 동의하시면, 서비스 연동 후 진단 결과를 이메일로 받아보실 수 있습니다.</p>
                 <div className="privacy-note">
                   <ShieldCheck size={20} />
                   <div><strong>정보는 안전하게 관리합니다</strong><p>이메일은 결과 발송 목적으로만 사용하며, 동의 여부를 확인한 후 처리합니다.</p></div>
@@ -128,7 +138,7 @@ consent: false
                   <span className="required-note">* 필수 입력</span>
                 </div>
                 <label htmlFor="storeName">가게 이름 <span>*</span></label>
-                <div className="input-wrap"><Store size={18} /><input id="storeName" value={form.storeName} onChange={(e) => update("storeName", e.target.value)} placeholder="예: 소담 돈가스" maxLength={80} /></div>
+                <div className="input-wrap"><Store size={18} /><input id="storeName" value={form.storeName} onChange={(e) => update("storeName", e.target.value)} placeholder="예: 소담 돈가스" maxLength={30} /></div>
 
                 <label htmlFor="region">지역 <span>*</span></label>
                 <div className="input-wrap"><MapPin size={18} /><input id="region" value={form.region} onChange={(e) => update("region", e.target.value)} placeholder="예: 창원시 성산구 상남동" maxLength={100} /></div>
@@ -144,7 +154,7 @@ consent: false
                     value={form.station}
                     onChange={(e) => update("station", e.target.value)}
                     placeholder="예: 서울역 (없으면 비워두세요)"
-                    maxLength={100}
+                    maxLength={20}
                   />
                </div>
                <p className="field-help">
@@ -157,9 +167,21 @@ consent: false
                 </div>
                 <div className="consent-box">
                   <label className="consent-label">
-                    <input type="checkbox" checked={form.consent} onChange={(e) => update("consent", e.target.checked)} />
+                    <input
+  type="checkbox"
+  checked={form.consent}
+  onChange={(e) => {
+    const checked = e.target.checked;
+    setForm((old) => ({
+      ...old,
+      consent: checked,
+      email: checked ? old.email : ""
+    }));
+    setError("");
+  }}
+/>
                     <span className="custom-checkbox"><CheckCircle2 size={15} /></span>
-                    <span><strong>개인정보 수집·이용에 동의합니다.</strong><small>수집 항목: 이메일 주소 · 목적: 진단 결과 발송 · 보관: 프로젝트 종료 후 30일 이내 파기 예정 · 동의를 거부할 수 있으며, 거부 시 이메일 결과 발송이 제한됩니다.</small></span>
+                    <span><strong>개인정보 수집·이용에 동의합니다.</strong><small>수집 항목: 이메일 주소 · 목적: 진단 결과 발송 · 보관: 2026-11-24 파기 · 동의를 거부할 수 있으며, 거부 시 이메일 결과 발송이 제한됩니다.</small></span>
                   </label>
                 </div>
                 {error && <p className="error-message" role="alert">{error}</p>}
