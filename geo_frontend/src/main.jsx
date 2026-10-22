@@ -17,6 +17,7 @@ email: "",
 consent: false
   });
   const [showResult, setShowResult] = useState(false);
+  const [diagnosisResult, setDiagnosisResult] = useState(null);
   const [error, setError] = useState("");
   const [showHelp, setShowHelp] = useState(false);
 
@@ -200,19 +201,82 @@ consent: false
         </>
       ) : (
         <main className="result-page">
-          <div className="result-topline"><span className="result-pill"><WandSparkles size={14} /> DEMO PREVIEW</span><span>실제 AI 분석 결과가 아닙니다</span></div>
+          <div className="result-topline">
+  <span className="result-pill">
+    <WandSparkles size={14} />
+    {diagnosisResult?.ok ? "AI DIAGNOSIS RESULT" : "DEMO PREVIEW"}
+  </span>
+  <span>
+    {diagnosisResult?.ok
+      ? "AI가 생성한 분석 결과입니다."
+      : "실제 AI 분석 결과가 아닙니다"}
+  </span>
+</div>
           <div className="result-header">
             <div className="result-symbol"><BarChart3 size={28} /></div>
-            <div><div className="section-kicker">GEO DIAGNOSIS PREVIEW</div><h1>{form.storeName} <span>진단 미리보기</span></h1><p>{form.region} · 대표 메뉴: {form.menu}</p></div>
+            <h1>
+  {form.storeName}{" "}
+  <span>{diagnosisResult?.ok ? "AI 진단 결과" : "진단 미리보기"}</span>
+</h1>
           </div>
-          <div className="demo-alert"><CircleHelp size={20} /><div><strong>시제품용 예시 화면입니다.</strong><p>아래 수치와 경쟁 매장 정보는 예시이며, 실제 AI에 질의하거나 결과를 저장·발송하지 않았습니다.</p></div></div>
+          {!diagnosisResult?.ok && (
+  <div className="demo-alert">
+    <CircleHelp size={20} />
+    <div>
+      <strong>시제품용 예시 화면입니다.</strong>
+      <p>
+        아래 수치와 경쟁 매장 정보는 예시이며,
+        실제 AI에 질의하거나 결과를 저장·발송하지 않았습니다.
+      </p>
+    </div>
+  </div>
+)}<h1>
+  {form.storeName}{" "}
+  <span>{diagnosisResult?.ok ? "AI 진단 결과" : "진단 미리보기"}</span>
+</h1>
           <div className="result-cards">
-            <div className="metric-card"><span>예시 언급률</span><strong>60<span>%</span></strong><small>샘플 데이터 · 실제 측정 아님</small></div>
-            <div className="metric-card"><span>예시 질문 수</span><strong>10<span>개</span></strong><small>실제 질문 생성 전</small></div>
-            <div className="metric-card"><span>분석 상태</span><strong className="pending">연결 대기</strong><small>Gemini API 연결 필요</small></div>
+          <div className="metric-card">
+  <span>{diagnosisResult?.ok ? "AI 매장 언급률" : "예시 언급률"}</span>
+  <strong>
+    {diagnosisResult?.ok
+      ? `${diagnosisResult.summary?.mention?.rate ?? "—"}`
+      : "60"}
+    <span>%</span>
+  </strong>
+  <small>
+    {diagnosisResult?.ok ? "AI 진단 결과" : "샘플 데이터 · 실제 측정 아님"}
+  </small>
+</div>  
+            <div className="metric-card">
+  <span>{diagnosisResult?.ok ? "AI 진단 질문 수" : "예시 질문 수"}</span>
+  <strong>
+    {diagnosisResult?.ok
+      ? diagnosisResult.questions?.length ?? 0
+      : 10}
+    <span>개</span>
+  </strong>
+  <small>
+    {diagnosisResult?.ok ? "실제 생성된 질문 기준" : "실제 질문 생성 전"}
+  </small>
+</div>
+            <div className="metric-card">
+  <span>분석 상태</span>
+  <strong className={diagnosisResult?.ok ? "" : "pending"}>
+    {diagnosisResult?.ok ? "진단 완료" : "연결 대기"}
+  </strong>
+  <small>
+    {diagnosisResult?.ok
+      ? "AI 진단 결과 수신 완료"
+      : "Gemini API 연결 필요"}
+  </small>
+</div>
           </div>
           <section className="result-section">
-            <div className="result-section-title"><h2>개선 제안 예시</h2><span>샘플 콘텐츠</span></div>
+            <div className="result-section-title"><h2>
+  {diagnosisResult?.ok ? "AI 맞춤 개선 제안" : "개선 제안 예시"}
+</h2><h2>
+  {diagnosisResult?.ok ? "AI 맞춤 개선 제안" : "개선 제안 예시"}
+</h2><span>샘플 콘텐츠</span></div>
             <div className="recommendation"><span className="recommend-number">01</span><div><strong>매장 정보를 여러 채널에서 일관되게 관리하기</strong><p>상호, 주소, 영업시간, 대표 메뉴가 공식 웹사이트와 지도 서비스에서 동일한지 점검해 보세요.</p></div><ChevronRight size={19} /></div>
             <div className="recommendation"><span className="recommend-number">02</span><div><strong>대표 메뉴와 매장 특징을 구체적으로 설명하기</strong><p>메뉴의 차별점, 가격대, 주차 가능 여부 등 손님이 자주 궁금해하는 정보를 정리해 보세요.</p></div><ChevronRight size={19} /></div>
             <div className="recommendation"><span className="recommend-number">03</span><div><strong>손님이 실제로 검색할 질문을 준비하기</strong><p>혼밥, 가족 식사, 점심 모임 등 방문 상황에 맞는 질문으로 노출 상태를 점검할 수 있습니다.</p></div><ChevronRight size={19} /></div>
