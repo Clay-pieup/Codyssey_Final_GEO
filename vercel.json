@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "npm ci --prefix geo_frontend",
+  "buildCommand": "npm run build --prefix geo_frontend",
+  "outputDirectory": "geo_frontend/dist",
+  "functions": {
+    "api/*.py": {
+      "maxDuration": 300,
+      "excludeFiles": "{geo_frontend/**,docs/**,automation/**,**/node_modules/**,**/__pycache__/**}"
+    }
+  }
+}
