@@ -55,6 +55,7 @@ def measure_store(store: str, dong: str, menu: str) -> list[dict]:
                     "store": store, "question": q, "search": use_search, "run": run,
                     "ok": r.ok, "elapsed": r.elapsed, "mentioned": mentioned,
                     "sources": len(r.sources), "length": len(r.text),
+                    "sites": [s for s in r.source_sites if s][:3],  # 원래 사이트 이름 (주소는 Google 중간 주소일 수 있음)
                     "preview": r.text[:120].replace("\n", " ") if r.ok else r.error[:120],
                     "model": r.model,
                 })
@@ -102,7 +103,8 @@ def summarize(rows: list[dict]) -> str:
     lines.append("\n### 3. 답변 앞부분 (웹 검색 켬, 1회차)\n")
     for r in rows:
         if r["search"] and r["run"] == 1:
-            lines.append(f"- **{r['store']} · {r['question']}**: {r['preview']}")
+            sites = f" (출처 사이트: {', '.join(r['sites'])})" if r.get("sites") else ""
+            lines.append(f"- **{r['store']} · {r['question']}**: {r['preview']}{sites}")
     lines.append("")
     return "\n".join(lines)
 
