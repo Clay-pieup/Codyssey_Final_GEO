@@ -37,7 +37,7 @@ report2 = run_more(report)
 | 이름 | 배포 값 | 메모 |
 | --- | --- | --- |
 | `GEMINI_API_KEY` | 팀 유료 키 | 저장소에 절대 올리지 않음 |
-| `GEMINI_MODEL` | 실측 후 정한 모델 | 비우면 코드 기본값 (`ai/gemini_client.py` `DEFAULT_MODEL`) |
+| `GEMINI_MODEL` | `gemini-3.5-flash-lite` | 비우면 코드 기본값 (`ai/gemini_client.py` `DEFAULT_MODEL`, 10/22부터 3.5-flash-lite) |
 | `GEMINI_USE_SEARCH` | `1` | 무료 키는 웹 검색 할당량이 없어 `0`이어야 동작 |
 | `GEMINI_REPEAT` | `3` | 시간이 부족하면 `2` |
 | `GEMINI_CONCURRENCY` | `5`~`10` | 유료 키 기준. 동시 3개면 웹 검색 끔 기준 약 64초 |

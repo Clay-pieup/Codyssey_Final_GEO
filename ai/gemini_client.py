@@ -18,10 +18,12 @@ load_dotenv()  # 프로젝트 맨 위의 .env 파일에서 GEMINI_API_KEY 등을
 
 PROVIDER = "gemini"  # 2차에 ChatGPT·Claude를 붙이면 "openai", "anthropic" 등으로 구분
 
-# 기본 모델: Gemini 3 계열.
+# 기본 모델: Gemini 3 계열 Flash-Lite.
 # 이유: 웹 검색(Grounding) 월 5,000회 무료는 Gemini 3 이상 모델 기준 (2.5 이하는 요청 단위 과금이라 비용 계산이 달라짐)
-# .env 의 GEMINI_MODEL 로 바꿀 수 있음 (예: Flash-Lite 계열). 최종 선택은 실측 후 확정 [실측 후 조정]
-DEFAULT_MODEL = "gemini-3.8-flash"
+# 10/22: 3.8-flash → 3.5-flash-lite. 3.8-flash는 호출 1회 17초(10/19 실측)·품질 점검 중 시간 초과(10/20) 기록,
+#        3.5-flash-lite는 배포 환경(웹 검색 켬·반복 3회·동시 10개)에서 진단 22.5초 (10/22 팀장 확인)
+# .env 의 GEMINI_MODEL 로 바꿀 수 있음. 두 모델 유료 키 측정 후 최종 확정
+DEFAULT_MODEL = "gemini-3.5-flash-lite"
 
 # 호출 1회 시간 제한(초). 응답이 없을 때 끝없이 기다리지 않게 함
 # (10/19 실측: 3.8-flash 첫 호출이 2분 가까이 응답 없음)
@@ -65,7 +67,8 @@ class GeminiResult:
     provider: str = PROVIDER      # 어느 회사 AI인지 (gemini / 나중에 openai, anthropic)
     model: str = ""               # 실제 사용한 모델 이름
     text: str = ""                # 답변 본문
-    sources: list = field(default_factory=list)  # 웹 검색 사용 시 인용된 사이트 주소
+    sources: list = field(default_factory=list)  # 웹 검색 사용 시 인용된 주소 (Google 중간 주소 grounding-api-redirect일 수 있음)
+    source_sites: list = field(default_factory=list)  # 출처마다 원래 사이트 이름 (도메인 또는 제목, sources와 같은 순서)
     elapsed: float = 0.0          # 걸린 시간(초) → 300초 제한 실측에 사용
     error: str = ""               # 실패 이유
 
@@ -143,24 +146,36 @@ def ask_gemini(
     )
     if response is None:
         return GeminiResult(ok=False, model=model, error=error)
+    urls, sites = _extract_sources(response)
     return GeminiResult(
         ok=True,
         model=model,
         text=(response.text or "").strip(),
-        sources=_extract_sources(response),
+        sources=urls,
+        source_sites=sites,
         elapsed=round(time.perf_counter() - start, 2),  # 한도 대기 시간 포함
     )
 
 
-def _extract_sources(response) -> list:
-    """웹 검색을 썼을 때 답변에 인용된 사이트 주소를 꺼낸다. 없으면 빈 목록."""
+def _extract_sources(response) -> tuple[list, list]:
+    """웹 검색을 썼을 때 답변에 인용된 출처를 꺼낸다 → (주소 목록, 사이트 이름 목록). 없으면 빈 목록 2개.
+
+    Gemini는 주소를 Google 중간 주소(vertexaisearch.cloud.google.com/grounding-api-redirect/…)로 주는 경우가 많아
+    주소만으로는 원래 사이트를 알 수 없음 → 출처의 domain(있으면) 또는 title(보통 "blog.naver.com"처럼 사이트 이름)을 함께 저장
+    """
+    urls, sites = [], []
     try:
         meta = response.candidates[0].grounding_metadata
-        if not meta or not meta.grounding_chunks:
-            return []
-        return [c.web.uri for c in meta.grounding_chunks if c.web and c.web.uri]
+        chunks = (meta.grounding_chunks if meta else None) or []
+        for c in chunks:
+            web = getattr(c, "web", None)
+            if not web or not web.uri:
+                continue
+            urls.append(web.uri)
+            sites.append((getattr(web, "domain", None) or web.title or "").strip())
     except (AttributeError, IndexError, TypeError):
-        return []
+        return [], []
+    return urls, sites
 
 
 @dataclass
