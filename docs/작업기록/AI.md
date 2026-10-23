@@ -211,9 +211,25 @@
   - 화면: ![초록별돈까스 3회](../images/ai/1022_testname_chorokbyeol.png) ![달무리칼국수 3회](../images/ai/1022_testname_dalmuri.png)
 - 막혔던 점과 해결:
   - 처음에 본인 무료 키로 돌려 웹 검색 질의 30개가 모두 429 → 유료 키로 바꿔 해결 (무료 키에는 웹 검색 할당량이 없음, 10/19 실측과 같은 원인)
-  - `.env` 모델 이름을 `3.8-flash`로 적어 질문 생성이 4초 만에 실패 → `gemini-3.8-flash`처럼 `gemini-`를 붙여 해결
+  - `.env` 모델 이름을 `3.8-flash`, `3.5-flash-lite`처럼 `gemini-` 없이 적어 질문 생성이 4초 만에 실패 → `gemini-3.8-flash`, `gemini-3.5-flash-lite`처럼 `gemini-`를 붙여 해결
+    - AI Studio 사용량의 10/22 "404 NotFound" 약 40회(비용 없음)가 이 실행 → 없는 모델 이름이라 404, 질문 생성 3번 시도 × 재시도 1회 × 3회차 = 실행 1번에 18회 → 두 모델 이름을 모두 잘못 적어 2번 실행해 약 40회 (팀장 확인 요청으로 원인 기록)
+    - 보완: 404·400·키 오류처럼 다시 보내도 똑같은 오류는 재시도하지 않고 바로 멈춤, 리포트 `problems`에 "모델 이름을 확인해 주세요" 안내 → 같은 실수 때 404는 실행 1번에 1회 (`ai/gemini_client.py` `is_permanent_error()`)
   - "행복돈까스"는 웹 검색에 같은 이름 가게가 나와 평가자용에서 제외
-- 관련 PR: #14
+- 관련 PR: #14 (404 보완은 다음 PR)
+
+
+## 10/23 · 배포 환경에서 출처 분류 확인, 404 재시도 방지
+
+- 무엇을 했나:
+  - 배포 주소 브라우저 콘솔에서 `/api/diagnose`로 명동교자 진단 1회 → 출처가 사이트 이름으로 분류되는지 확인 (PR #14 배포 후)
+  - 10/22 AI Studio 404 약 40회 원인 기록, 다시 보내도 같은 오류는 재시도하지 않게 보완 (PR #15)
+- 확인 결과 (gemini-3.5-flash-lite, 웹 검색 켬, 19.3초, 언급률 76%):
+  - 출처 152개 → 블로그 57 · SNS·영상 36 · 지도·리뷰 16 · 언론 7 · 백과·커뮤니티 6 · 기타 30 (10/22 배포에서는 131개 모두 "기타")
+  - 자주 나온 사이트: tistory.com 57 · youtube.com 36 · siksinhot.com 16 · namu.wiki 5 · trip.com 4
+  - 화면: ![배포 환경 출처 분류](../images/ai/1023_deploy_sources.png)
+- 알게 된 점: Gemini 웹 검색 출처에는 네이버 블로그보다 티스토리·유튜브가 많이 나옴 → 개선 제안에서 "티스토리·유튜브 후기"를 근거로 쓸 수 있음
+- 보완: "기타"로 빠진 trip.com, wikifoodie 같은 여행·맛집 리뷰 사이트를 지도·리뷰 키워드에 추가
+- 관련 PR: #15
 
 
 ### 화면 기록 (docs/images/ai/)
@@ -232,5 +248,6 @@
 | 10 | 10/20 | 품질 점검 | 가상 가게 3회 (자동 Agent, Must ①② 3/3) | [1020_quality_fake_store.png](../images/ai/1020_quality_fake_store.png) |
 | 11 | 10/22 | 테스트 상호 점검 | 초록별돈까스 망원점 3회 (웹 검색 켬, 3.8-flash, 0%·자동 Agent) | [1022_testname_chorokbyeol.png](../images/ai/1022_testname_chorokbyeol.png) |
 | 12 | 10/22 | 테스트 상호 점검 | 달무리칼국수 명동점 3회 (웹 검색 켬, 3.5-flash-lite, 0%·자동 Agent) | [1022_testname_dalmuri.png](../images/ai/1022_testname_dalmuri.png) |
+| 13 | 10/23 | 배포 확인 | 명동교자 출처 152개 사이트 이름으로 분류 | [1023_deploy_sources.png](../images/ai/1023_deploy_sources.png) |
 
 - 화면을 새로 찍으면 이 표 아래에 한 줄씩 추가합니다. 파일 이름은 `날짜_기능_내용.png` (영어·숫자만)
