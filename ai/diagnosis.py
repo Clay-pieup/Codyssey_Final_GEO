@@ -154,7 +154,8 @@ def _rate(part: list[dict]) -> dict:
 SOURCE_KINDS = [
     ("블로그", ("blog", "tistory", "brunch", "velog", "블로그")),
     ("지도·리뷰", ("map", "place", "diningcode", "siksin", "mangoplate", "catchtable", "kakao", "tripadvisor",
-                "yelp", "polle", "daangn", "지도", "플레이스", "다이닝코드", "식신", "망고플레이트", "캐치테이블", "당근")),
+                "yelp", "polle", "daangn", "trip.com", "wikifoodie", "foodie",  # 10/23 배포 확인에서 "기타"로 빠진 여행·맛집 리뷰 사이트 추가
+                "지도", "플레이스", "다이닝코드", "식신", "망고플레이트", "캐치테이블", "당근")),
     ("언론", ("news", "chosun", "joongang", "donga", "hani", "yna", "mk.co", "hankyung", "gqkorea", "esquire",
              "magazine", "뉴스", "신문", "일보", "매거진")),
     ("SNS·영상", ("instagram", "facebook", "youtube", "threads", "tiktok", "인스타그램", "유튜브")),

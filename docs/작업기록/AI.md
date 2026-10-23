@@ -218,6 +218,20 @@
 - 관련 PR: #14 (404 보완은 다음 PR)
 
 
+## 10/23 · 배포 환경에서 출처 분류 확인, 404 재시도 방지
+
+- 무엇을 했나:
+  - 배포 주소 브라우저 콘솔에서 `/api/diagnose`로 명동교자 진단 1회 → 출처가 사이트 이름으로 분류되는지 확인 (PR #14 배포 후)
+  - 10/22 AI Studio 404 약 40회 원인 기록, 다시 보내도 같은 오류는 재시도하지 않게 보완 (PR #15)
+- 확인 결과 (gemini-3.5-flash-lite, 웹 검색 켬, 19.3초, 언급률 76%):
+  - 출처 152개 → 블로그 57 · SNS·영상 36 · 지도·리뷰 16 · 언론 7 · 백과·커뮤니티 6 · 기타 30 (10/22 배포에서는 131개 모두 "기타")
+  - 자주 나온 사이트: tistory.com 57 · youtube.com 36 · siksinhot.com 16 · namu.wiki 5 · trip.com 4
+  - 화면: ![배포 환경 출처 분류](../images/ai/1023_deploy_sources.png)
+- 알게 된 점: Gemini 웹 검색 출처에는 네이버 블로그보다 티스토리·유튜브가 많이 나옴 → 개선 제안에서 "티스토리·유튜브 후기"를 근거로 쓸 수 있음
+- 보완: "기타"로 빠진 trip.com, wikifoodie 같은 여행·맛집 리뷰 사이트를 지도·리뷰 키워드에 추가
+- 관련 PR: #15
+
+
 ### 화면 기록 (docs/images/ai/)
 
 | 순서 | 날짜 | 작업 | 화면 | 파일 |
@@ -234,5 +248,6 @@
 | 10 | 10/20 | 품질 점검 | 가상 가게 3회 (자동 Agent, Must ①② 3/3) | [1020_quality_fake_store.png](../images/ai/1020_quality_fake_store.png) |
 | 11 | 10/22 | 테스트 상호 점검 | 초록별돈까스 망원점 3회 (웹 검색 켬, 3.8-flash, 0%·자동 Agent) | [1022_testname_chorokbyeol.png](../images/ai/1022_testname_chorokbyeol.png) |
 | 12 | 10/22 | 테스트 상호 점검 | 달무리칼국수 명동점 3회 (웹 검색 켬, 3.5-flash-lite, 0%·자동 Agent) | [1022_testname_dalmuri.png](../images/ai/1022_testname_dalmuri.png) |
+| 13 | 10/23 | 배포 확인 | 명동교자 출처 152개 사이트 이름으로 분류 | [1023_deploy_sources.png](../images/ai/1023_deploy_sources.png) |
 
 - 화면을 새로 찍으면 이 표 아래에 한 줄씩 추가합니다. 파일 이름은 `날짜_기능_내용.png` (영어·숫자만)
