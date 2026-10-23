@@ -282,7 +282,9 @@ def run_diagnosis(store: str, region: str, menus: list[str], station: str = "") 
 
     qs = generate_questions(store, region, menus, station)
     if not qs.ok:
-        report.update(error="질문을 만들지 못했어요. 잠시 후 다시 시도해 주세요.", problems=qs.problems)
+        # 규칙 검사 실패면 어긴 항목, 호출 실패면 오류 원인(모델 이름 오류·한도 초과 등)을 problems에 남김
+        report.update(error="질문을 만들지 못했어요. 잠시 후 다시 시도해 주세요.",
+                      problems=qs.problems or ([qs.error[:300]] if qs.error else []))
         return _finish(report, started)
     report["questions"] = qs.questions
     report["question_warnings"] = qs.warnings  # 질문 품질 경고 (예: 동 이름 6개 미만), 진단은 계속함

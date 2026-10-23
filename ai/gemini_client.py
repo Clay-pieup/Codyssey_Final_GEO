@@ -89,9 +89,24 @@ def _rate_limit_wait(error: Exception) -> float | None:
     return min(max(wait, 2.0), 30.0)
 
 
+# 다시 보내도 똑같이 실패하는 오류 (모델 이름 오류, 잘못된 요청, 키 오류) → 재시도하지 않음
+# 10/22: 모델 이름을 "3.8-flash"로 적었을 때 404가 재시도까지 포함해 40회쯤 쌓인 일이 있어 추가
+PERMANENT_ERRORS = ("404", "NOT_FOUND", "400 INVALID_ARGUMENT", "API key not valid", "API_KEY_INVALID", "PERMISSION_DENIED")
+
+
+def is_permanent_error(error: str) -> bool:
+    """다시 시도해도 소용없는 오류인지 (모델 이름·요청 형식·키 문제)."""
+    return any(k in error for k in PERMANENT_ERRORS)
+
+
+def model_not_found_hint(model: str) -> str:
+    return f"모델 '{model}'을 찾을 수 없어요. .env의 GEMINI_MODEL을 확인해 주세요 (예: gemini-3.5-flash-lite, 앞에 gemini- 필요)"
+
+
 def _call_with_retry(call, retries: int):
     """call()을 실행하고, 실패하면 다시 시도한다.
     - 분당 한도(429): Google이 알려준 시간만큼 기다렸다가 최대 RATE_LIMIT_RETRIES번
+    - 다시 보내도 똑같은 오류(404 모델 없음, 400, 키 오류): 바로 포기
     - 그 밖의 오류: 1초 쉬고 최대 retries번
     성공하면 (결과, ""), 끝내 실패하면 (None, 마지막 오류 문장)
     """
@@ -101,6 +116,8 @@ def _call_with_retry(call, retries: int):
             return call(), ""
         except Exception as e:  # 네트워크 오류, 한도 초과 등
             last_error = f"{type(e).__name__}: {e}"
+            if is_permanent_error(last_error):
+                return None, last_error
             wait = _rate_limit_wait(e)
             if wait is not None and limited < RATE_LIMIT_RETRIES:
                 limited += 1
