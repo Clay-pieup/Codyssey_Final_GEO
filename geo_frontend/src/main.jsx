@@ -18,6 +18,10 @@ consent: false
   });
   const [showResult, setShowResult] = useState(false);
   const [error, setError] = useState("");
+  const [diagnosisResult, setDiagnosisResult] = useState(null);
+  const [isDiagnosing, setIsDiagnosing] = useState(false);
+  const [moreError, setMoreError] = useState("");
+  const [isRunningMore, setIsRunningMore] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
 
   const update = (key, value) => {
@@ -25,7 +29,7 @@ consent: false
     setError("");
   };
 
-  const startDiagnosis = (event) => {
+  const startDiagnosis = async (event) => {
     event.preventDefault();
     if (!form.storeName.trim() || !form.region.trim() || !form.menu.trim() ) {
       setError("상호, 지역, 대표 메뉴를 모두 입력해 주세요.");
@@ -51,15 +55,98 @@ consent: false
        return;
     }
     
-        setShowResult(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+            setError("");
+    setDiagnosisResult(null);
+    setIsDiagnosing(true);
+
+    try {
+      const response = await fetch("/api/diagnose", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          store: form.storeName.trim(),
+          region: form.region.trim(),
+          menus,
+          station: form.station.trim(),
+          email: form.email.trim(),
+          consent: form.consent,
+        }),
+      });
+
+      const report = await response.json();
+
+      if (!response.ok || !report.ok) {
+        const problems = Array.isArray(report.problems)
+          ? report.problems.join("\n")
+          : "";
+
+        setError(
+          [report.error || "진단 중 오류가 발생했습니다.", problems]
+            .filter(Boolean)
+            .join("\n")
+        );
+        return;
+      }
+
+      setDiagnosisResult(report);
+      setShowResult(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (error) {
+      setError("서버 연결에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setIsDiagnosing(false);
+    }
   };
 
   const reset = () => {
-    setShowResult(false);
-    setError("");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  setShowResult(false);
+  setDiagnosisResult(null);
+  setError("");
+  setMoreError("");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
+  const runMoreDiagnosis = async () => {
+  if (!diagnosisResult?.ok || !diagnosisResult.more_available || isRunningMore) {
+    return;
+  }
+
+  setMoreError("");
+  setIsRunningMore(true);
+
+  try {
+    const response = await fetch("/api/more", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        report: diagnosisResult,
+        email: form.email.trim(),
+        consent: form.consent,
+      }),
+    });
+
+    const report = await response.json();
+
+    if (!response.ok || !report.ok || report.more_error) {
+      setMoreError(
+        report.more_error ||
+        report.error ||
+        "추가 진단 중 오류가 발생했습니다."
+      );
+      return;
+    }
+
+    setDiagnosisResult(report);
+  } catch (error) {
+    setMoreError("서버 연결에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+  } finally {
+    setIsRunningMore(false);
+  }
+};
 
   return (
     <div className="app-shell">
@@ -185,8 +272,20 @@ consent: false
                   </label>
                 </div>
                 {error && <p className="error-message" role="alert">{error}</p>}
-                <button className="submit-button" type="submit">진단 시작하기 <ArrowRight size={18} /></button>
-                <p className="form-footnote"><ShieldCheck size={14} /> 현재는 화면 시제품입니다. 실제 AI 분석 및 이메일 발송은 서버 연결 후 제공됩니다.</p>
+                <button
+  className="submit-button"
+  type="submit"
+  disabled={isDiagnosing}
+>
+  {isDiagnosing ? (
+    "진단 중… 최대 1~2분"
+  ) : (
+    <>
+      진단 시작하기 <ArrowRight size={18} />
+    </>
+  )}
+</button>
+                <p className="form-footnote"><ShieldCheck size={14} /> 진단 결과는 AI가 생성한 추정치입니다. 이메일은 동의한 경우에만 결과 발송에 사용합니다.</p>
               </form>
             </section>
 
@@ -200,25 +299,228 @@ consent: false
         </>
       ) : (
         <main className="result-page">
-          <div className="result-topline"><span className="result-pill"><WandSparkles size={14} /> DEMO PREVIEW</span><span>실제 AI 분석 결과가 아닙니다</span></div>
+          <div className="result-topline">
+  <span className="result-pill">
+    <WandSparkles size={14} />
+    {diagnosisResult?.ok ? "AI DIAGNOSIS RESULT" : "DEMO PREVIEW"}
+  </span>
+  <span>
+    {diagnosisResult?.ok
+      ? "AI가 생성한 분석 결과입니다."
+      : "실제 AI 분석 결과가 아닙니다"}
+  </span>
+</div>
           <div className="result-header">
             <div className="result-symbol"><BarChart3 size={28} /></div>
-            <div><div className="section-kicker">GEO DIAGNOSIS PREVIEW</div><h1>{form.storeName} <span>진단 미리보기</span></h1><p>{form.region} · 대표 메뉴: {form.menu}</p></div>
+            <h1>
+  {form.storeName}{" "}
+  <span>{diagnosisResult?.ok ? "AI 진단 결과" : "진단 미리보기"}</span>
+</h1>
           </div>
-          <div className="demo-alert"><CircleHelp size={20} /><div><strong>시제품용 예시 화면입니다.</strong><p>아래 수치와 경쟁 매장 정보는 예시이며, 실제 AI에 질의하거나 결과를 저장·발송하지 않았습니다.</p></div></div>
-          <div className="result-cards">
-            <div className="metric-card"><span>예시 언급률</span><strong>60<span>%</span></strong><small>샘플 데이터 · 실제 측정 아님</small></div>
-            <div className="metric-card"><span>예시 질문 수</span><strong>10<span>개</span></strong><small>실제 질문 생성 전</small></div>
-            <div className="metric-card"><span>분석 상태</span><strong className="pending">연결 대기</strong><small>Gemini API 연결 필요</small></div>
+          {!diagnosisResult?.ok && (
+  <div className="demo-alert">
+    <CircleHelp size={20} />
+    <div>
+      <strong>시제품용 예시 화면입니다.</strong>
+      <p>
+        아래 수치와 경쟁 매장 정보는 예시이며,
+        실제 AI에 질의하거나 결과를 저장·발송하지 않았습니다.
+      </p>
+    </div>
+    </div>
+)}
+<div className="result-cards">
+          <div className="metric-card">
+  <span>{diagnosisResult?.ok ? "AI 매장 언급률" : "예시 언급률"}</span>
+  <strong>
+    {diagnosisResult?.ok
+      ? `${diagnosisResult.summary?.mention?.rate ?? "—"}`
+      : "60"}
+    <span>%</span>
+  </strong>
+  <small>
+    {diagnosisResult?.ok ? "AI 진단 결과" : "샘플 데이터 · 실제 측정 아님"}
+  </small>
+</div>  
+            <div className="metric-card">
+  <span>{diagnosisResult?.ok ? "AI 진단 질문 수" : "예시 질문 수"}</span>
+  <strong>
+    {diagnosisResult?.ok
+      ? diagnosisResult.questions?.length ?? 0
+      : 10}
+    <span>개</span>
+  </strong>
+  <small>
+    {diagnosisResult?.ok ? "실제 생성된 질문 기준" : "실제 질문 생성 전"}
+  </small>
+</div>
+            <div className="metric-card">
+  <span>분석 상태</span>
+  <strong className={diagnosisResult?.ok ? "" : "pending"}>
+    {diagnosisResult?.ok ? "진단 완료" : "연결 대기"}
+  </strong>
+  <small>
+    {diagnosisResult?.ok
+      ? "AI 진단 결과 수신 완료"
+      : "Gemini API 연결 필요"}
+  </small>
+</div>
           </div>
-          <section className="result-section">
-            <div className="result-section-title"><h2>개선 제안 예시</h2><span>샘플 콘텐츠</span></div>
-            <div className="recommendation"><span className="recommend-number">01</span><div><strong>매장 정보를 여러 채널에서 일관되게 관리하기</strong><p>상호, 주소, 영업시간, 대표 메뉴가 공식 웹사이트와 지도 서비스에서 동일한지 점검해 보세요.</p></div><ChevronRight size={19} /></div>
-            <div className="recommendation"><span className="recommend-number">02</span><div><strong>대표 메뉴와 매장 특징을 구체적으로 설명하기</strong><p>메뉴의 차별점, 가격대, 주차 가능 여부 등 손님이 자주 궁금해하는 정보를 정리해 보세요.</p></div><ChevronRight size={19} /></div>
-            <div className="recommendation"><span className="recommend-number">03</span><div><strong>손님이 실제로 검색할 질문을 준비하기</strong><p>혼밥, 가족 식사, 점심 모임 등 방문 상황에 맞는 질문으로 노출 상태를 점검할 수 있습니다.</p></div><ChevronRight size={19} /></div>
+          {diagnosisResult?.ok && diagnosisResult.summary?.by_type && (
+  <section className="result-section">
+    <div className="result-section-title">
+      <h2>질문 유형별 AI 언급 결과</h2>
+    </div>
+
+    {Object.entries(diagnosisResult.summary.by_type).map(
+      ([type, result]) => (
+        <div className="recommendation" key={type}>
+          <div>
+            <strong>{type}</strong>
+            <p>
+              정상 답변 {result.valid ?? 0}개 중
+              {" "}{result.mentioned ?? 0}개 언급
+              {" "}(
+              {result.rate == null ? "측정 불가" : `${result.rate}%`}
+              )
+            </p>
+          </div>
+        </div>
+      )
+    )}
+   </section>
+)} 
+
+  {diagnosisResult?.ok && (
+  <section className="result-section">
+    <div className="result-section-title">
+      <h2>AI 답변에 함께 등장한 가게</h2>
+    </div>
+
+    {(diagnosisResult.summary?.competitors ?? []).length > 0 ? (
+      diagnosisResult.summary.competitors.slice(0, 3).map((competitor, index) => (
+        <div className="recommendation" key={index}>
+          <span className="recommend-number">
+            {String(index + 1).padStart(2, "0")}
+          </span>
+          <div>
+            <strong>{competitor.name}</strong>
+            <p>{competitor.description || "소개 문장 없음"}</p>
+            <small>함께 등장한 답변: {competitor.answers ?? 0}개</small>
+          </div>
+        </div>
+      ))
+    ) : (
+      <p>함께 언급된 다른 가게가 없습니다.</p>
+    )}
+  </section>
+)}
+{diagnosisResult?.ok && diagnosisResult.agent?.ran && (
+  <section className="result-section">
+    <div className="result-section-title">
+      <h2>AI 추가 진단 결과</h2>
+    </div>
+
+    {diagnosisResult.agent.reason_to_run && (
+      <p>{diagnosisResult.agent.reason_to_run}</p>
+    )}
+
+    {(diagnosisResult.agent.trace ?? []).map((item, index) => (
+      <div className="recommendation" key={index}>
+        <span className="recommend-number">
+          {String(index + 1).padStart(2, "0")}
+        </span>
+        <div>
+          <strong>{item.tool_label || "추가 진단"}</strong>
+          {item.question && <p>추가 질문: "{item.question}"</p>}
+          <p>선택 이유: {item.why || "별도 설명 없음"}</p>
+          <small>
+            언급 결과: {item.result?.mentioned ?? 0}개 /
+            정상 답변 {item.result?.valid ?? 0}개
+          </small>
+        </div>
+      </div>
+    ))}
+  </section>
+)}
+
+<section className="result-section">
+            <div className="result-section-title">
+  <h2>
+    {diagnosisResult?.ok ? "AI 맞춤 개선 제안" : "개선 제안 예시"}
+  </h2>
+  <span>{diagnosisResult?.ok ? "AI 분석 결과" : "샘플 콘텐츠"}</span>
+</div>
+            {diagnosisResult?.ok ? (
+  (diagnosisResult.suggestions ?? []).slice(0, 3).map((suggestion, index) => (
+    <div className="recommendation" key={index}>
+      <span className="recommend-number">
+        {String(index + 1).padStart(2, "0")}
+      </span>
+      <div>
+        <strong>{suggestion.title}</strong>
+        <p>{suggestion.detail}</p>
+        {suggestion.evidence && (
+          <small>분석 근거: {suggestion.evidence}</small>
+        )}
+      </div>
+      <ChevronRight size={19} />
+    </div>
+  ))
+) : (
+  <p>AI 진단을 실행하면 맞춤 개선 제안이 표시됩니다.</p>
+)}
           </section>
-          <div className="result-actions"><button className="secondary-button" onClick={reset}>입력 화면으로 돌아가기</button><button className="submit-button" onClick={() => window.alert("현재 시제품에서는 실제 진단·메일 발송이 연결되어 있지 않습니다.")}>실제 진단 연결 상태 확인 <ArrowRight size={17} /></button></div>
-          <footer><span>geo.check</span><span>예시 결과 · 실제 AI 분석 아님</span></footer>
+
+        {diagnosisResult?.ok && diagnosisResult.notice && (
+  <section className="result-section">
+    <div className="result-section-title">
+      <h2>진단 결과 안내</h2>
+    </div>
+    <p>{diagnosisResult.notice}</p>
+  </section>
+)}  
+
+{diagnosisResult?.ok && diagnosisResult.summary?.low_reliability && (
+  <section className="result-section">
+    <div className="result-section-title">
+      <h2>분석 신뢰도 안내</h2>
+    </div>
+    <p>
+      정상적으로 수집된 AI 답변이 충분하지 않아
+      진단 결과의 신뢰도가 낮을 수 있습니다.
+      결과를 참고 자료로 활용해 주세요.
+    </p>
+  </section>
+)}
+          {moreError && (
+  <div className="demo-alert" role="alert">
+    <CircleHelp size={20} />
+    <p>{moreError}</p>
+  </div>
+)}
+
+<div className="result-actions"></div>
+
+          <div className="result-actions"><button className="secondary-button" onClick={reset}>입력 화면으로 돌아가기</button>{diagnosisResult?.ok && diagnosisResult.more_available && (
+  <button
+    className="submit-button"
+    onClick={runMoreDiagnosis}
+    disabled={isRunningMore}
+  >
+    {isRunningMore ? "더 자세히 진단하는 중..." : "더 자세히 진단하기"}
+    <ArrowRight size={17} />
+  </button>
+)}
+</div>
+          <footer>
+  <span>geo.check</span>
+  <span>
+    {diagnosisResult?.ok
+      ? "실제 AI 진단 결과"
+      : "예시 결과 · 실제 AI 분석 아님"}
+  </span>
+</footer>
         </main>
       )}
     </div>
