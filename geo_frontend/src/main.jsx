@@ -17,6 +17,7 @@ email: "",
 consent: false
   });
   const [showResult, setShowResult] = useState(false);
+  const [error, setError] = useState("");
   const [diagnosisResult, setDiagnosisResult] = useState(null);
   const [isDiagnosing, setIsDiagnosing] = useState(false);
   const [moreError, setMoreError] = useState("");
@@ -272,7 +273,7 @@ consent: false
                 </div>
                 {error && <p className="error-message" role="alert">{error}</p>}
                 <button
-  className="primary-button"
+  className="submit-button"
   type="submit"
   disabled={isDiagnosing}
 >
@@ -284,7 +285,7 @@ consent: false
     </>
   )}
 </button>
-                <p className="form-footnote"><ShieldCheck size={14} /> 현재는 화면 시제품입니다. 실제 AI 분석 및 이메일 발송은 서버 연결 후 제공됩니다.</p>
+                <p className="form-footnote"><ShieldCheck size={14} /> 진단 결과는 AI가 생성한 추정치입니다. 이메일은 동의한 경우에만 결과 발송에 사용합니다.</p>
               </form>
             </section>
 
@@ -431,6 +432,7 @@ consent: false
         </span>
         <div>
           <strong>{item.tool_label || "추가 진단"}</strong>
+          {item.question && <p>추가 질문: "{item.question}"</p>}
           <p>선택 이유: {item.why || "별도 설명 없음"}</p>
           <small>
             언급 결과: {item.result?.mentioned ?? 0}개 /
@@ -506,7 +508,7 @@ consent: false
     onClick={runMoreDiagnosis}
     disabled={isRunningMore}
   >
-    {isRunningMore ? "AI 추가 진단 중..." : "AI 추가 진단하기"}
+    {isRunningMore ? "더 자세히 진단하는 중..." : "더 자세히 진단하기"}
     <ArrowRight size={17} />
   </button>
 )}
