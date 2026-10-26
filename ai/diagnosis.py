@@ -230,29 +230,90 @@ def summarize(store: str, answers: list[dict]) -> dict:
 
 # ---------------------------------------------------------------- 5. 개선 제안
 
+# 개선 제안 근거에 영어 칸 이름이 그대로 나오면 다시 만들게 하는 검사용 (10/26)
+FIELD_NAMES = re.compile(r"\b(mention|mentioned|valid|rate|by_type|rank|counted|first_place|competitors|descriptions|"
+                         r"sources|kinds|sites|agent_findings|menu_answers|total)\b", re.I)
+
+
+def _summary_for_prompt(summary: dict, agent: dict | None = None) -> str:
+    """진단 요약을 사장님이 읽는 한국어 문장으로 바꾼다. 개선 제안 프롬프트에 넣는 용도 (리포트 데이터 구조는 그대로).
+
+    10/26: JSON(mention·valid·rate 같은 영어 칸 이름)을 그대로 넘기니 AI가 근거에 칸 이름을 그대로 베껴 씀
+    → 처음부터 "상황형 질문 답변 9개 중 6개에서 언급" 같은 문장으로 넘김
+    """
+    def part(stat: dict | None) -> str:
+        stat = stat or {}
+        valid, hit, rate = stat.get("valid", 0), stat.get("mentioned", 0), stat.get("rate")
+        if not valid:
+            return "정상 답변 없음"
+        return f"답변 {valid}개 중 {hit}개에서 언급 ({rate}%)"
+
+    lines = [f"- 전체: 손님 질문에 대한 AI {part(summary.get('mention'))}"]
+    for t, stat in (summary.get("by_type") or {}).items():
+        lines.append(f"- {t} 질문: {part(stat)}")
+
+    rank = summary.get("rank") or {}
+    if rank.get("counted"):
+        lines.append(f"- 가게 목록을 보여 준 답변 {rank['counted']}개에서 평균 {rank.get('average')}위, 1위 {rank.get('first_place', 0)}번")
+
+    descs = summary.get("descriptions") or []
+    if descs:
+        lines.append("- AI가 가게를 소개한 말: " + ", ".join(f"\"{d['text']}\" ({d['count']}번)" for d in descs))
+    else:
+        lines.append("- AI가 가게를 소개한 말: 없음")
+
+    comps = summary.get("competitors") or []
+    for c in comps:
+        menu = c.get("menu_answers", "")
+        menu_part = ""
+        if "/" in str(menu):
+            m_hit, m_valid = str(menu).split("/", 1)
+            menu_part = f", 메뉴형 질문 답변 {m_valid}개 중 {m_hit}개에 등장"
+        desc = f", AI 소개: \"{c['description']}\"" if c.get("description") else ""
+        lines.append(f"- 함께 자주 나온 가게: {c.get('name')} (답변 {c.get('answers', 0)}개에 등장{menu_part}{desc})")
+    if not comps:
+        lines.append("- 함께 자주 나온 가게: 없음")
+
+    src = summary.get("sources") or {}
+    if src.get("total"):
+        kinds = ", ".join(f"{k} {n}개" for k, n in sorted((src.get("kinds") or {}).items(), key=lambda x: -x[1]))
+        lines.append(f"- AI가 참고한 사이트: 총 {src['total']}개 ({kinds})")
+        sites = src.get("sites") or []
+        if sites:
+            lines.append("- 자주 참고한 사이트: " + ", ".join(f"{x['site']} {x['count']}번" for x in sites))
+
+    for t in (agent or {}).get("trace") or []:
+        r = t.get("result") or {}
+        extra = ""
+        if r.get("descriptions"):
+            extra += ", AI가 소개한 말: " + ", ".join(f"\"{d}\"" for d in r["descriptions"])
+        if r.get("other_stores"):
+            extra += ", 함께 나온 가게: " + ", ".join(r["other_stores"])
+        lines.append(f"- 추가 질문({t.get('tool_label')}) \"{t.get('question')}\": "
+                     f"답변 {r.get('valid', 0)}개 중 {r.get('mentioned', 0)}개에서 언급{extra}")
+    return "\n".join(lines)
+
+
 def suggest(store: str, dong: str, menus: list[str], summary: dict, agent: dict | None = None) -> list[dict]:
-    brief = {k: summary.get(k) for k in ("mention", "by_type", "rank", "descriptions", "competitors", "sources")}
-    if agent and agent.get("trace"):  # Agent 추가 질의에서 알게 된 것도 근거로 넘김
-        brief["agent_findings"] = [
-            {"질문 종류": t["tool_label"], "질문": t["question"], "고른 이유": t["why"],
-             "결과": f"{t['result']['mentioned']}/{t['result']['valid']} 언급",
-             "AI가 소개한 말": t["result"]["descriptions"], "함께 나온 가게": t["result"]["other_stores"]}
-            for t in agent["trace"]
-        ]
     prompt = load_prompt(
         "improvement", store_name=store, dong=dong, menus=", ".join(menus),
-        summary=json.dumps(brief, ensure_ascii=False, indent=1),
+        summary=_summary_for_prompt(summary, agent),
     )
+    fallback = []
     for _ in range(2):
         r = ask_gemini(prompt, temperature=0.3, json_output=True)
         try:
             items = json.loads(r.text)["suggestions"] if r.ok else []
             items = [s for s in items if isinstance(s, dict) and s.get("title")]
             if len(items) >= 3:
+                # 근거에 영어 칸 이름이 섞이면 한 번 더 만들어 봄. 그래도 섞이면 그대로 씀 (제안이 없는 것보다 나음)
+                if any(FIELD_NAMES.search(str(s.get("evidence", "")) + str(s.get("detail", ""))) for s in items[:3]):
+                    fallback = fallback or items[:3]
+                    continue
                 return items[:3]
         except (json.JSONDecodeError, KeyError, TypeError):
             pass
-    return []
+    return fallback
 
 
 # ---------------------------------------------------------------- 6. 진입 함수
