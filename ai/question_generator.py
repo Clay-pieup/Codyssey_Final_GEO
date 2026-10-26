@@ -12,7 +12,7 @@
 import json
 from dataclasses import dataclass, field
 
-from ai.gemini_client import ask_gemini
+from ai.gemini_client import ask_gemini, is_permanent_error, model_not_found_hint
 from ai.prompt_loader import load_prompt
 from ai.text_utils import extract_dong, normalize, store_key
 
@@ -106,6 +106,10 @@ def generate_questions(store: str, region: str, menus: list[str], station: str =
         result = ask_gemini(prompt + feedback, temperature=TEMPERATURE, json_output=True)
         if not result.ok:
             error = result.error
+            if is_permanent_error(error):  # 모델 이름·키 오류는 다시 만들어도 똑같이 실패 → 바로 멈춤
+                if "404" in error or "NOT_FOUND" in error:
+                    error = model_not_found_hint(result.model)
+                break
             continue
         try:
             questions = json.loads(result.text)["questions"]

@@ -63,7 +63,7 @@ report = run_diagnosis(
 | `summary.descriptions` | AI가 가게를 소개한 말 상위 3개 `[{"text": "…", "count": 2}]` |
 | `summary.sentiment` | `{"긍정": 5, "중립": 3}` |
 | `summary.competitors` | 함께 나온 가게 상위 3곳 `[{"name": "…", "description": "…", "answers": 8, "menu_answers": "8/9"}]` |
-| `summary.sources` | 웹 검색 출처 `{"total": 12, "kinds": {"블로그": 7, "지도·리뷰": 5}}` |
+| `summary.sources` | 웹 검색 출처 `{"total": 131, "kinds": {"블로그": 60, "지도·리뷰": 30, "기타": 41}, "sites": [{"site": "blog.naver.com", "count": 25}, …]}` → `kinds`는 종류별 개수(블로그·지도·리뷰·언론·SNS·영상·백과·커뮤니티·기타), `sites`는 자주 나온 사이트 상위 5곳. 10/22부터 Google 중간 주소 대신 출처의 사이트 이름으로 분류 |
 | `summary.low_reliability` | 정상 답변이 2/3 미만이면 true → 화면에 "결과 신뢰도 낮음" 표시 권장 |
 | `answers` | 답변 원문과 분석 (질문 × 반복 수만큼). 구글 시트 `진단결과` 기록용 |
 | `agent` | Agent 추가 진단 결과 (아래 5장) |
@@ -75,7 +75,8 @@ report = run_diagnosis(
 ```json
 {
   "question_id": "q3", "type": "메뉴형", "question": "망원동 치즈돈까스 맛있는 곳", "run": 1,
-  "status": "ok", "text": "답변 원문…", "sources": ["https://…"], "elapsed": 3.1, "error": "",
+  "status": "ok", "text": "답변 원문…", "sources": ["https://vertexaisearch.cloud.google.com/grounding-api-redirect/…"],
+  "source_sites": ["blog.naver.com"], "elapsed": 3.1, "error": "",
   "mentioned": true, "mention_check": {"code": true, "ai": true, "mismatch": false},
   "rank": 2, "description": "두툼한 등심으로 알려진 가게", "sentiment": "긍정",
   "other_stores": [{"name": "바삭공방", "description": "리뷰가 많은 돈까스집"}]
@@ -99,7 +100,7 @@ report = run_diagnosis(
 | 이름 | 기본값 | 설명 |
 | --- | --- | --- |
 | `GEMINI_API_KEY` | (필수) | 배포 환경에는 팀 유료 키 |
-| `GEMINI_MODEL` | `gemini-3.8-flash` | 실측 후 확정 (3.5-flash-lite 후보) |
+| `GEMINI_MODEL` | `gemini-3.5-flash-lite` | 10/22 코드 기본값 변경. 유료 키로 3.8-flash와 비교 측정 후 확정 |
 | `GEMINI_USE_SEARCH` | `1` | 웹 검색 사용. 무료 키 로컬 테스트 때만 `0` |
 | `GEMINI_REPEAT` | `3` | 질문마다 반복 횟수 |
 | `GEMINI_CONCURRENCY` | `3` | 동시 호출 수. 유료 키는 10까지 권장 |

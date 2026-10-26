@@ -1,84 +1,153 @@
-# AI 진단 인수인계 메모 (10/22 통합일용)
+# AI 진단 인수인계 메모
 
-> AI 담당 작성 · 2026-10-20 · AI 담당은 10/22(목) 통합일에 자리에 없습니다. 통합 중 AI 부분에서 막히면 이 문서부터 봐 주세요.
-> 자세한 입출력: [`AI_진단_입출력.md`](AI_진단_입출력.md) · 기능별 설명: [`AI_활용명세.md`](AI_활용명세.md)
+> AI 담당 작성 · 처음 작성 2026-10-20 (10/22 통합일용) · **v2 2026-10-22: 배포 후 실제 값으로 갱신** · v2.1 10/23: 6장 확인 기록을 행마다 정확히 표기
+> AI 부분에서 막히면 이 문서부터 봐 주세요. 입출력 상세: [`AI_진단_입출력.md`](AI_진단_입출력.md) · 기능별 설명: [`AI_활용명세.md`](AI_활용명세.md) · 서버 쪽: [`서버_해설.md`](서버_해설.md), [`API_명세.md`](API_명세.md)
 
 ---
 
-## 1. 한 줄 요약
+## 0. 지금 상태 (10/22 기준)
 
-- 서버는 `ai/diagnosis.py`의 함수 2개만 부르면 됩니다. 둘 다 JSON으로 바꿀 수 있는 dict(리포트)를 돌려줍니다.
-  - `run_diagnosis(store, region, menus, station)` → 진단 1회 (언급률 30% 미만이면 Agent까지 자동)
-  - `run_more(report)` → "더 자세히 진단하기" 버튼 (화면이 받은 리포트를 그대로 다시 보냄)
-- 이메일은 AI 쪽에 넘기지 않습니다. 이메일은 서버가 화면 입력에서 따로 붙여 Make로 보냅니다.
+| 항목 | 상태 |
+| --- | --- |
+| 배포 | https://codyssey-final-geo.vercel.app/ (서버 `api/diagnose.py`, `api/more.py`가 AI 함수를 부름) |
+| 배포 환경 실행 확인 | 명동교자 · 웹 검색 켬 · 반복 3회 · 동시 10개 · 3.5-flash-lite → 진단 22.5초, 정상 답변 30/30, 언급률 90%, 버튼 13초 (팀장 확인) |
+| Must ① 진단 실행 | 품질 점검 4곳 × 3회 모두 통과 ([품질점검.md](작업기록/품질점검.md)) |
+| Must ② AI Agent 추가 진단 | 자동(언급률 0%)·버튼(언급률 90% 이상) 두 경로 모두 3회 중 3회 통과 |
+| 기본 모델 | `gemini-3.5-flash-lite` (10/22 PR #14) |
 
-## 2. 서버에서 부르는 예
+## 1. 진단 한 번에 일어나는 일
 
-```python
-from ai.diagnosis import run_diagnosis, run_more
+```
+화면 "진단 시작" ──▶ POST /api/diagnose ──▶ run_diagnosis(store, region, menus, station)
+                                              │
+   ① 입력 확인 (AI 호출 없음) ── 실패 → ok:false + 안내 문장
+   ② 질문 생성 1회 (규칙 검사, 어기면 최대 3번)
+   ③ 질의 30회 = 질문 10개 × 3회 (웹 검색 켬, 동시 10개)
+   ④ 답변 분석 10회 (질문 하나의 답변 3개를 한 번에)
+   ⑤ 집계: 언급률·유형별·순위·경쟁 가게·출처
+   ⑥ 언급률 < 30%  → Agent 자동: 도구 선택 1회 + 추가 질의 최대 6회 + 분석 최대 2회
+      언급률 ≥ 30% → Agent 안 함, more_available: true (버튼 표시)
+   ⑦ 개선 제안 1회 (3개)
+                                              │
+                         리포트(dict) ──▶ Make (메일·시트) ──▶ 화면에 응답
 
-# 진단 시작 버튼
-try:
-    report = run_diagnosis(store, region, menus, station)   # menus는 목록 ["칼국수", "만두"]
-except Exception as e:                                       # 예상하지 못한 오류 대비
-    report = {"ok": False, "error": "진단 중 오류가 났어요. 잠시 후 다시 시도해 주세요.", "problems": [str(e)[:200]]}
-
-# 더 자세히 진단하기 버튼 (report: 화면이 보낸 1차 리포트)
-report2 = run_more(report)
+화면 "더 자세히 진단하기" ──▶ POST /api/more {report} ──▶ run_more(report)
+   → ⑥ Agent만 실행(언급률과 관계없이) + ⑦ 개선 제안 다시 → 리포트 전체를 돌려줌
 ```
 
-- `report["ok"]`가 false → `error`를 크게, `problems`를 목록으로 표시
-- `report["more_available"]`가 true → "더 자세히 진단하기" 버튼 표시 (언급률이 높아 자동 추가 질의를 안 했거나, 자동 추가 질의가 실패한 경우). 누르면 결과가 올 때까지 버튼 비활성화
-- `report2["more_error"]`가 빈 문자열이 아니면 그 문장을 버튼 아래에 표시
-- 화면·메일에 꼭 표시: `report["notice"]` ("AI가 생성한 추정치입니다…", 평가기준 G7)
+- 호출 수: Agent 없음 42회 / Agent 자동 51회 / 버튼 +10회 (최대 52회)
+- 웹 검색을 쓰는 호출: ③과 ⑥의 추가 질의만 (최대 36회)
 
-## 3. 배포 환경 변수 (Vercel)
+## 2. 화면에 보여 줄 리포트 칸
+
+| 화면 영역 | 리포트 칸 | 보여 주는 예 |
+| --- | --- | --- |
+| 실패 안내 | `ok`가 false → `error`(크게), `problems`(목록) | "입력을 확인해 주세요." / "지역은 동 이름까지 입력해 주세요." |
+| AI 생성 표시 (G7, 필수) | `notice` | "AI가 생성한 추정치입니다. 실제 ChatGPT·Gemini 앱에서…" |
+| 언급률 | `summary.mention` → `mentioned`/`valid`, `rate` | "정상 답변 30개 중 27개 (90%)" (분모를 꼭 함께) |
+| 신뢰도 | `summary.low_reliability`가 true | "정상 답변이 적어 결과 신뢰도가 낮아요" |
+| 질문별 결과 | `questions[]` + `answers[]`(같은 `question_id`) | 질문 10개 × 3회 ○/× 표 |
+| 유형별 결과 | `summary.by_type` | 지역 일반형 6/6, 메뉴형 7/9 … |
+| 순위 | `summary.rank` → `average`, `first_place` | "평균 1.3위, 1위 5회" (`counted`가 0이면 숨김) |
+| AI가 가게를 소개한 말 | `summary.descriptions[]` | "만두가 유명한 칼국수 노포" (2회) |
+| 함께 나온 가게 | `summary.competitors[]` | "미성옥 – 답변 8개" |
+| 출처 | `summary.sources` → `total`, `kinds`, `sites` | "출처 131개: 블로그 60 · 지도·리뷰 30 …", 자주 나온 사이트 상위 5곳 |
+| 추가 진단 (Agent) | `agent.reason_to_run`, `agent.trace[]` → `tool_label`, `why`, `question`, `result.mentioned`/`result.valid` | "직접 지명형 – '망원동 초록별돈까스 어때?' → 0/3 언급 / 고른 이유: 언급률 0%라 가게를 아는지 확인" |
+| 버튼 | `more_available`가 true일 때만 표시 | 누르면 결과가 올 때까지 비활성화 |
+| 버튼 실패 | `more_error`가 빈 문자열이 아님 | "추가 진단을 하지 못했어요. 잠시 후 다시 눌러 주세요." |
+| 개선 제안 | `suggestions[]` → `title`, `detail`, `evidence` | 3개 카드 (근거 문장 함께) |
+
+## 3. Make(메일·시트)로 넘길 값
+
+| Make 필드 | 리포트 칸 |
+| --- | --- |
+| 상호 / 지역 | `input.store` / `input.region` |
+| 언급률 | `summary.mention.rate` (+ `mentioned`, `valid`) |
+| 추가 질의 종류 / 실행 방식 / 판단 이유 | `agent.trace[].tool_label` / `agent.trigger`(auto·button) / `agent.trace[].why` |
+| 개선 제안 | `suggestions[].title` |
+| 안내 문구 (메일에도 필수) | `notice` |
+| 이메일 | 리포트에 없음. 서버가 동의한 경우에만 화면 입력에서 따로 붙임 |
+
+## 4. 배포 환경 변수 (Vercel)
 
 | 이름 | 배포 값 | 메모 |
 | --- | --- | --- |
-| `GEMINI_API_KEY` | 팀 유료 키 | 저장소에 절대 올리지 않음 |
-| `GEMINI_MODEL` | 실측 후 정한 모델 | 비우면 코드 기본값 (`ai/gemini_client.py` `DEFAULT_MODEL`) |
+| `GEMINI_API_KEY` | 팀 유료 키 | 저장소·공개 채널·공용 PC에 남기지 않음 |
+| `GEMINI_MODEL` | `gemini-3.5-flash-lite` | 비우면 코드 기본값도 같은 모델. 이름 앞에 `gemini-`를 꼭 붙임 |
 | `GEMINI_USE_SEARCH` | `1` | 무료 키는 웹 검색 할당량이 없어 `0`이어야 동작 |
-| `GEMINI_REPEAT` | `3` | 시간이 부족하면 `2` |
-| `GEMINI_CONCURRENCY` | `5`~`10` | 유료 키 기준. 동시 3개면 웹 검색 끔 기준 약 64초 |
+| `GEMINI_REPEAT` | `3` | |
+| `GEMINI_CONCURRENCY` | `10` | 유료 키 기준 |
 | `GEMINI_TIMEOUT_SEC` | `60` | 호출 1회 시간 제한 |
+| `MAKE_WEBHOOK_URL` | Make 웹훅 주소 | 비밀값. 저장소에는 빈 칸만 (`.env.example`) |
 
-- 진단 1회 최대 51회 호출, 웹 검색 켬이면 더 오래 걸림 → Vercel 함수 실행 시간 제한을 넉넉하게(최대 300초) 설정해 주세요
+- 함수 실행 시간 제한: `vercel.json`의 `maxDuration: 300` (설정됨)
 - 필요한 패키지: `requirements.txt` (`google-genai`, `python-dotenv`), Python 3.10 이상
 
-## 4. 서버 없이 AI만 확인하는 방법 (프로젝트 맨 위 폴더에서)
+## 5. 실측 기준 (진단 1회 시간)
+
+| 조건 | 모델 | 진단 1회 | 출처 |
+| --- | --- | :-: | --- |
+| 웹 검색 켬 · 반복 3회 · 동시 10개 (배포) | 3.5-flash-lite | 22.5초 | 10/22 팀장 배포 확인 (명동교자) |
+| 웹 검색 켬 · 반복 3회 · 동시 10개 (로컬) | 3.5-flash-lite | 28~32초 | 10/22 품질 점검 (달무리칼국수) |
+| 웹 검색 켬 · 반복 3회 · 동시 10개 (로컬) | 3.8-flash | 177~191초 | 10/22 품질 점검 (초록별돈까스) |
+| 웹 검색 끔 · 반복 1회 · 동시 2개 (무료 키) | 3.5-flash-lite | 69~120초 | 10/20 품질 점검 (분당 한도 대기 포함) |
+
+- 1분이 넘게 걸리면 모델 이름(`GEMINI_MODEL`)부터 확인
+
+## 6. 평가자 확인 시나리오 (명세서 구현 현황 표용)
+
+| 확인할 것 | 입력 | 기대 결과 | 확인 기록 |
+| --- | --- | --- | --- |
+| Must ① 진단 실행 | 상호 "명동교자", 지역 "서울 중구 명동", 메뉴 "칼국수, 만두" | 질문 10개별 언급 여부 표, 언급률(%)과 분모, 개선 제안 3개 | 10/20 같은 입력 3회 중 3회 통과 (웹 검색 끔), 10/23 배포 환경 1회 확인 (19.3초, 언급률 76%) |
+| Must ② 자동 Agent | 상호 "초록별돈까스 망원점", 지역 "서울 마포구 망원동", 메뉴 "등심돈까스" (또는 "달무리칼국수 명동점" / "서울 중구 명동" / "칼국수") | 언급률 0% → 추가 진단 영역에 AI가 고른 질문 종류(주로 직접 지명형)와 이유, 추가 질문 결과 | 10/22 두 상호 각 3회 중 3회 통과 (웹 검색 켬, 배포와 같은 설정) |
+| Must ② 버튼 | Must ① 결과 화면에서 "더 자세히 진단하기" 클릭 | 추가 진단 영역에 고른 질문 종류와 이유, 개선 제안이 다시 만들어짐 | 10/20 명동교자 3회 중 3회 통과 (언급률 90% 이상 → 버튼으로 Agent 실행), 10/22 배포 환경 1회 확인 (13초, 팀장) |
+| 입력 확인 | 지역 "망원점" (동 없음) | AI 호출 없이 "지역은 동 이름까지 입력해 주세요." | AI를 부르기 전 코드 검사(`check_input()`)라 항상 같은 결과 |
+
+- 3회 점검 기록: [`작업기록/품질점검.md`](작업기록/품질점검.md)
+- 테스트 상호 2개는 10/22 웹 검색과 팀장의 지도앱(네이버·카카오) 확인으로 같은 이름 가게가 없음을 확인 → 평가자용으로 확정
+- "행복돈까스"는 같은 이름 가게가 실제로 있어 평가자용으로 쓰지 않음
+
+## 7. 서버 없이 AI만 확인하는 방법 (프로젝트 맨 위 폴더에서)
 
 | 확인할 것 | 명령 | 정상이면 |
 | --- | --- | --- |
-| 키·패키지 | `python -m ai.check_setup` | 모델 이름과 짧은 인사 답변 출력 |
+| 키·패키지 | `python -m ai.check_setup` | 모델 이름과 짧은 인사 답변 |
 | 진단 1회 + 버튼 | `python -m ai.diagnosis` | 언급률·Agent·개선 제안 출력, 언급이 많으면 버튼을 누를지 물음 |
-| 같은 입력 3회 | `python -m ai.quality_check` | `docs/작업기록/품질점검.md`에 표 추가 |
+| 같은 입력 3회 | `python -m ai.quality_check` | 시작 줄에 모델·설정 표시, `docs/작업기록/품질점검.md`에 표 추가 |
+| 모델·웹 검색 비교 | `python -m ai.measure` | `docs/작업기록/실측결과.md`에 시간·언급·출처 사이트 기록 |
 
-- 무료 키로 시험할 때 `.env`: `GEMINI_USE_SEARCH=0`, `GEMINI_REPEAT=1`, `GEMINI_CONCURRENCY=2`
-- 실행 결과 `last_diagnosis.json`은 저장소에 올리지 않습니다
+- `python`을 못 찾는다고 나오면(Microsoft Store 안내) `py -m …`로 실행
+- 무료 키로 시험할 때 `.env`: `GEMINI_MODEL=gemini-3.5-flash-lite`, `GEMINI_USE_SEARCH=0`, `GEMINI_REPEAT=1`, `GEMINI_CONCURRENCY=2`
+- 실행 결과 `last_diagnosis.json`은 저장소에 올리지 않음. 공용 PC에서는 끝나고 `.env` 삭제
 
-## 5. 자주 나는 오류와 대처
+## 8. 자주 나는 오류와 대처
 
 | 화면·로그에 보이는 것 | 원인 | 대처 |
 | --- | --- | --- |
-| `429 RESOURCE_EXHAUSTED … exceeded your current quota` (웹 검색 켬) | 무료 키에는 웹 검색 할당량이 없음 | 유료 키로 바꾸거나 `GEMINI_USE_SEARCH=0` |
+| `429 RESOURCE_EXHAUSTED … exceeded your current quota` (웹 검색 켬) | 무료 키, 또는 결제가 연결되지 않은 프로젝트의 키 | 결제 연결된 프로젝트의 키로 바꾸거나 `GEMINI_USE_SEARCH=0` |
 | `429 … PerMinute` | 분당 호출 한도 | 코드가 알려 준 시간만큼 기다렸다가 최대 3번 다시 시도함. 자주 나면 `GEMINI_CONCURRENCY`를 줄임 |
+| 질문 생성이 몇 초 만에 실패 | 모델 이름 오류 (예: `3.8-flash`처럼 `gemini-` 빠짐) | `GEMINI_MODEL=gemini-3.5-flash-lite` |
+| 질문 생성이 몇 분 걸린 뒤 실패 | 느린 모델(3.8-flash)이 60초 제한에 반복해서 걸림 | 3.5-flash-lite로 바꿈 |
 | `GEMINI_API_KEY가 없습니다` | `.env` 또는 Vercel 환경 변수 없음 | 키 설정. 로컬은 프로젝트 맨 위 폴더에서 실행해야 `.env`를 읽음 |
 | `입력을 확인해 주세요.` | 지역에 "동"이 없음, 메뉴가 비었음 등 (AI 호출 전) | 정상 동작. 화면에 `problems` 표시 |
 | `질문을 만들지 못했어요.` | 질문 생성 3번 모두 규칙 검사 실패 | 다시 시도. 반복되면 `problems` 내용을 AI 담당에게 전달 |
 | `AI 답변을 받지 못했어요.` | 질의 30회가 모두 실패 (키·한도·네트워크) | `problems`의 첫 오류 메시지 확인 |
 | 개선 제안이 비어 있음 | 제안 호출이 한도에 걸림 | 진단 자체는 성공. 다시 진단하면 대부분 해결 |
-| Vercel에서 시간 초과 | 호출 수·웹 검색으로 300초 근접 | `GEMINI_CONCURRENCY`를 올리거나 `GEMINI_REPEAT=2` |
+| 출처가 모두 "기타" | PR #14 이전 코드 (주소가 Google 중간 주소) | PR #14 병합 후 재배포 |
+| `Direct use of automatic function calling (AFC)…` 경고 | Gemini SDK 안내 문구 | 결과와 무관, 무시해도 됨 |
+| Vercel에서 시간 초과 | 느린 모델, 동시 호출 수 부족 | 모델 확인 → `GEMINI_CONCURRENCY` 올림 → 그래도면 `GEMINI_REPEAT=2` |
 | `ModuleNotFoundError: google` | 패키지 미설치 | `pip install -r requirements.txt` |
 | `TypeError: unsupported operand type(s) for \|` | Python 3.9 이하 | Python 3.10 이상 사용 |
 
-## 6. 알려진 한계 (서면 자료에도 기록)
+## 9. 알려진 한계 (서면 자료에도 기록)
 
-- 웹 검색을 끄면 AI가 모르는 가상 가게도 아는 척 설명할 수 있음 (10/19 행복돈까스 사례) → 배포는 웹 검색 켬
-- 같은 질문에도 AI 답이 매번 달라 언급률이 회차마다 조금씩 다름 → 반복 3회 평균, 품질 점검 기록 참고
+- 웹 검색을 끄면 AI가 모르는 가상 가게도 아는 척 설명할 수 있음 (10/19). 웹 검색을 켜면 기본 질문에서는 아는 척하지 않음 (10/22, 30개 × 3회 모두 언급 0회) → 배포는 웹 검색 켬
+- 같은 질문에도 AI 답이 매번 달라 언급률이 회차마다 조금씩 다름 (명동교자 90%·100%·90%) → 반복 3회 평균, 분모 함께 표시
+- 언급률이 중간인 가게는 Agent가 고르는 도구가 회차마다 달라질 수 있음. 0%·90% 이상은 매번 같은 판단
 - "진단 1회당 추가 질의 1번"은 서버가 기억하지 못해 화면의 버튼 비활성화에 의존
+- 출처 사이트 분류는 출처 이름(도메인·제목) 기준. 이름이 없거나 낯선 사이트는 "기타"
 
-## 7. 연락
+## 10. 연락
 
-- 10/22(목)은 AI 담당이 바로 답하기 어렵습니다. 팀 채널에 오류 메시지 전문과 입력값을 남겨 주시면 확인하는 대로 답하겠습니다.
-- AI 담당이 다시 작업하는 날: 10/23(금)
+- 오류가 나면 팀 채널에 **오류 메시지 전문 + 입력값 + 시각**을 남겨 주세요. 확인하는 대로 답하겠습니다.
+- AI 쪽 수정은 `feature/ai` 브랜치 → PR로 올립니다.

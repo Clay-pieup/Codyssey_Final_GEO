@@ -89,7 +89,7 @@ def run_queries(questions: list[dict]) -> list[dict]:
         r = ask_gemini(q["text"], use_search=USE_SEARCH)  # 손님 질문 그대로, temperature는 모델 기본값
         return {
             "question_id": q["id"], "type": q["type"], "question": q["text"], "run": run,
-            "status": _classify(r), "text": r.text, "sources": r.sources,
+            "status": _classify(r), "text": r.text, "sources": r.sources, "source_sites": r.source_sites,
             "elapsed": r.elapsed, "error": r.error[:200],
         }
 
@@ -150,14 +150,32 @@ def _rate(part: list[dict]) -> dict:
             "rate": int(hit / len(valid) * 100) if valid else None}  # 소수점 버림 (측정기준 5-2)
 
 
-def _source_kind(url: str) -> str:
-    host = urlparse(url).netloc.lower()
-    if any(k in host for k in ("blog", "tistory", "brunch", "velog")):
-        return "블로그"
-    if any(k in host for k in ("map", "place", "diningcode", "siksin", "mangoplate", "catchtable", "kakao")):
-        return "지도·리뷰"
-    if any(k in host for k in ("news", "chosun", "joongang", "donga", "hani", "yna", "mk.co", "hankyung")):
-        return "언론"
+# 출처 종류 분류 키워드 (사이트 이름·도메인에 들어 있으면 그 종류). 위에서부터 먼저 맞는 것
+SOURCE_KINDS = [
+    ("블로그", ("blog", "tistory", "brunch", "velog", "블로그")),
+    ("지도·리뷰", ("map", "place", "diningcode", "siksin", "mangoplate", "catchtable", "kakao", "tripadvisor",
+                "yelp", "polle", "daangn", "trip.com", "wikifoodie", "foodie",  # 10/23 배포 확인에서 "기타"로 빠진 여행·맛집 리뷰 사이트 추가
+                "지도", "플레이스", "다이닝코드", "식신", "망고플레이트", "캐치테이블", "당근")),
+    ("언론", ("news", "chosun", "joongang", "donga", "hani", "yna", "mk.co", "hankyung", "gqkorea", "esquire",
+             "magazine", "뉴스", "신문", "일보", "매거진")),
+    ("SNS·영상", ("instagram", "facebook", "youtube", "threads", "tiktok", "인스타그램", "유튜브")),
+    ("백과·커뮤니티", ("wikipedia", "namu.wiki", "reddit", "dcinside", "theqoo", "fmkorea", "위키")),
+]
+
+
+def _site_name(site: str, url: str = "") -> str:
+    """출처의 사이트 이름. Gemini가 준 이름(domain·title)이 있으면 그것, 없으면 주소의 호스트."""
+    name = (site or "").strip().lower()
+    if not name:
+        host = urlparse(url).netloc.lower()
+        name = "" if "grounding-api-redirect" in url or host.endswith("googleapis.com") else host
+    return name.removeprefix("www.")
+
+
+def _source_kind(name: str) -> str:
+    for kind, keys in SOURCE_KINDS:
+        if any(k in name for k in keys):
+            return kind
     return "기타"
 
 
@@ -189,8 +207,14 @@ def summarize(store: str, answers: list[dict]) -> dict:
         for k, n in comp_count.most_common(3)
     ]
 
-    urls = [u for a in answers for u in a["sources"]]
-    source_kinds = dict(Counter(_source_kind(u) for u in urls))
+    # 출처: 주소는 Google 중간 주소일 수 있어 사이트 이름(source_sites)으로 분류 (10/22)
+    names = []
+    for a in answers:
+        sites = a.get("source_sites") or []
+        for i, url in enumerate(a["sources"]):
+            names.append(_site_name(sites[i] if i < len(sites) else "", url))
+    source_kinds = dict(Counter(_source_kind(n) for n in names))
+    top_sites = [{"site": s, "count": n} for s, n in Counter(n for n in names if n).most_common(5)]
 
     return {
         "mention": stats,
@@ -200,7 +224,7 @@ def summarize(store: str, answers: list[dict]) -> dict:
         "descriptions": [{"text": t, "count": n} for t, n in descriptions],
         "sentiment": dict(sentiments),
         "competitors": competitors,
-        "sources": {"total": len(urls), "kinds": source_kinds},
+        "sources": {"total": len(names), "kinds": source_kinds, "sites": top_sites},
     }
 
 
@@ -259,7 +283,9 @@ def run_diagnosis(store: str, region: str, menus: list[str], station: str = "") 
 
     qs = generate_questions(store, region, menus, station)
     if not qs.ok:
-        report.update(error="질문을 만들지 못했어요. 잠시 후 다시 시도해 주세요.", problems=qs.problems)
+        # 규칙 검사 실패면 어긴 항목, 호출 실패면 오류 원인(모델 이름 오류·한도 초과 등)을 problems에 남김
+        report.update(error="질문을 만들지 못했어요. 잠시 후 다시 시도해 주세요.",
+                      problems=qs.problems or ([qs.error[:300]] if qs.error else []))
         return _finish(report, started)
     report["questions"] = qs.questions
     report["question_warnings"] = qs.warnings  # 질문 품질 경고 (예: 동 이름 6개 미만), 진단은 계속함
