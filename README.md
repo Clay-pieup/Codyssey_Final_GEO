@@ -26,7 +26,7 @@
 
 | 역할 | 담당 업무 | 작업 브랜치 | 기여 요약 (본인 작성) | 대표 커밋·PR·문서 |
 | --- | --- | --- | --- | --- |
-| 팀장 | 기획·명세, 서버(백엔드), 사용자 테스트, 발표 자료(서면) 총괄, 팀원 PR 승인 | `feature/pm-backend` | (팀장 본인 작성 예정) | [기획서](docs/기획서.md), [API 명세](docs/API_명세.md), [서버 해설](docs/서버_해설.md), PR #12 |
+| 팀장 | 기획·명세, 서버(백엔드), 사용자 테스트, 발표 자료(서면) 총괄, 팀원 PR 승인 | `feature/pm-backend` | 외식업 GEO 진단 주제를 제안하고, 기획서(문제 정의·타깃·AI 활용·기술 선택 근거)와 기능 요구 명세서(Must 3개·아키텍처·구현 현황)를 작성함<br>서버(api/·server/)를 설계해 화면·AI·Make를 연결하고, Vercel에 화면과 Python 함수를 한 주소로 배포함 (배포 환경 진단 20~35초 실측)<br>Gemini 유료 키(과제 전용·선불·키 분리)와 웹훅 등 비밀값을 환경 변수로 관리하고, 이메일 동의·시트 분리·파기 일정 등 개인정보 원칙을 정함<br>팀원 PR을 검토·통합하며(병합 전 빈 화면 오류 발견·수정 등) 결정 40여 건과 진행 과정을 README에 기록함<br>평가 기준표로 제출 점검표를 만들고, 팀 공통 Claude 규칙(CLAUDE.md)·한눈에 보기·발표 자료로 문서를 정리함 | [PR #12](https://github.com/Clay-pieup/Codyssey_Final_GEO/pull/12) (서버·배포), [PR #16](https://github.com/Clay-pieup/Codyssey_Final_GEO/pull/16) (명세서), [PR #21](https://github.com/Clay-pieup/Codyssey_Final_GEO/pull/21) (평가 대비 갱신), [기획서](docs/기획서.md), [서버 해설](docs/서버_해설.md) |
 | AI 담당 | 질문 생성, AI 질의·답변 분석, 개선 제안, 프롬프트 관리 | `feature/ai` | 가게 정보를 넣으면 Gemini가 얼마나 언급하는지 진단하는 AI 부분 전체를 맡음<br>Gemini 호출을 한 곳(gemini_client.py)으로 모으고, 질문 생성 → 답변 분석 → 개선 제안 3개 생성과 AI 한계 안내를 구현함<br>AI Agent: 언급이 부족한 이유를 알아보려고 질문 도구 3개(직접 지명형·경쟁 비교형·상황 세분형)를 함수로 정의하고, 진단 결과를 본 Gemini가 함수 호출로 직접 고르게 함 (G3)<br>같은 조건에서 두 모델을 재 보고(3.8-flash 진단 1회 177~191초, 3.5-flash-lite 28~32초) Vercel 300초 제한을 고려해 기본 모델을 3.5-flash-lite로 정함<br>같은 입력을 3번 돌리는 점검 스크립트(quality_check.py)를 만들어 실존 가게·가상 가게·평가자용 테스트 상호 4곳 모두 Must ①② 3회 중 3회 통과를 확인함 (G4) | [PR #10](https://github.com/Clay-pieup/Codyssey_Final_GEO/pull/10), [PR #14](https://github.com/Clay-pieup/Codyssey_Final_GEO/pull/14), [커밋 7297da3](https://github.com/Clay-pieup/Codyssey_Final_GEO/commit/7297da3), [작업기록/AI.md](docs/작업기록/AI.md), [AI 기술 결정 근거](docs/AI_기술결정근거.md) |
 | 화면·배포 담당 | 화면(프론트엔드), 외부 배포, Make 자동화 | `feature/frontend` | React와 Vite를 활용하여 GEO 진단 서비스의 사용자 입력 화면과 진단 결과 화면을 구현했습니다.<br>상호·지역·대표 메뉴를 필수 입력으로 구성하고, 가까운 역과 이메일을 선택 입력으로 처리했으며 개인정보 동의에 따른 이메일 입력 기능을 구현했습니다.<br>기본 진단 및 추가 진단 API를 프런트엔드와 연동하고, 결과 표시·로딩·오류 처리 기능을 작업했습니다.<br>Make Webhook, Google Sheets, Gmail을 연결하여 진단 결과 저장과 동의 사용자 대상 이메일 발송 자동화를 구성했습니다.<br>Make Blueprint 및 실행 증빙 자료를 GitHub에 업로드하고, 개발 과정과 해결 사항을 작업기록에 문서화했습니다. | [PR #11](https://github.com/Clay-pieup/Codyssey_Final_GEO/pull/11), [PR #17](https://github.com/Clay-pieup/Codyssey_Final_GEO/pull/17), [커밋 43d8b72](https://github.com/Clay-pieup/Codyssey_Final_GEO/commit/43d8b72) (Make 블루프린트), [커밋 6547d6a](https://github.com/Clay-pieup/Codyssey_Final_GEO/commit/6547d6a) (작업 기록)<br>※ 10/17 커밋 248f48e·210c2bc는 교육장 PC의 이전 사용자 Git 설정이 남아 다른 계정명(040611bluesky-creator)으로 기록됨. 화면·배포 담당(PuffyCripsy) 본인 작업 |
 
@@ -80,7 +80,7 @@ main ← 제출·배포되는 완성본 (직접 커밋 불가)
 - [AI 진단 입출력](docs/AI_진단_입출력.md) · [AI 활용 명세](docs/AI_활용명세.md) · [AI 인수인계](docs/AI_인수인계.md): AI 함수 사용법, 기능별 AI 활용과 코드 위치 (AI 담당)
 - [기능 요구 명세서](docs/기능요구명세서.md): Must 3개·비기능 요구사항·아키텍처·기술 요소별 코드 위치·평가자 확인 방법·구현 현황 표
 - [사용자 피드백 기록](docs/사용자_피드백_기록.md): 테스트 진행 방법·설문 문항·기록 양식 (테스트 후 작성, 가명 T1~)
-- 발표 자료: `docs/발표자료.pdf` (마지막 날 작성, 서면 심사용)
+- [발표 자료 (PDF)](docs/발표자료.pdf): 문제 정의·해결 과정, AI 활용 방식과 근거, 테스트 결과와 개선 (서면 심사용, 13장)
 
 ## 7. 실행 방법
 
