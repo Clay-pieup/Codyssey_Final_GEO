@@ -1,7 +1,7 @@
 """POST /api/diagnose — "진단 시작하기" 버튼.
 
 흐름: 요청 읽기 → 형식 확인 → AI 진단(run_diagnosis) → Make로 결과 전달 → 리포트 응답
-약속: docs/API_명세.md 1장 / 설명: docs/서버_해설.md
+약속: docs/기술/API_명세.md 1장 / 설명: docs/기술/서버_해설.md
 """
 
 import os
