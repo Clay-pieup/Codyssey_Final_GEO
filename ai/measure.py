@@ -15,7 +15,7 @@ from pathlib import Path
 
 from ai.gemini_client import ask_gemini
 
-# 진단 1회 최대 호출 수 (10/20 정정: 질의만 센 36회 → 전체 51회). docs/AI_활용명세.md 3-1
+# 진단 1회 최대 호출 수 (10/20 정정: 질의만 센 36회 → 전체 51회). docs/기술/AI_활용명세.md 3-1
 CALLS_PER_DIAGNOSIS = 51
 
 REPEAT = 2  # 질문·모드마다 반복 횟수
@@ -23,7 +23,7 @@ RESULT_PATH = Path("docs/작업기록/실측결과.md")
 
 
 def normalize(text: str) -> str:
-    """언급 판정용 표기 통일 (질문세트_측정기준.md 5-1)."""
+    """언급 판정용 표기 통일 (docs/기술/질문세트_측정기준.md 5-1)."""
     text = text.lower().replace("돈가스", "돈까스")
     return re.sub(r"[^0-9a-z가-힣]", "", text)
 
