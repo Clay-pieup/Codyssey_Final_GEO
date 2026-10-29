@@ -1,7 +1,7 @@
 # Agent 추가 질의 판단 프롬프트
 
 - 버전: v1 (2026-10-19)
-- 근거: 기획서 3-1 Agent 범위, docs/질문세트_측정기준.md 7장, docs/서비스_진단_예시.md 2단계
+- 근거: 기획서 3-1 Agent 범위, docs/기술/질문세트_측정기준.md 7장, docs/기술/서비스_진단_예시.md 2단계
 - 빈칸: $store_name, $dong, $station, $menus, $summary
 - 설정: temperature 0, 함수 호출 mode=ANY (도구 3개 중 1~2개를 반드시 고름)
 - 이 줄 아래 `---` 다음부터 AI에 보내짐
