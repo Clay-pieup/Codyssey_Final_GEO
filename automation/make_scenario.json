@@ -6,7 +6,7 @@
       "module": "gateway:CustomWebHook",
       "version": 1,
       "parameters": {
-        "hook": 3967346,
+        "hook": "REMOVED",
         "maxResults": 1
       },
       "mapper": {},
@@ -14,14 +14,6 @@
         "designer": {
           "x": 0,
           "y": 0
-        },
-        "setupValidation": {
-          "result": {
-            "valid": true,
-            "fields": []
-          },
-          "version": 1,
-          "configuration": "8eef75715291227e"
         },
         "restore": {
           "parameters": {
@@ -53,7 +45,7 @@
       "module": "google-sheets:addRow",
       "version": 2,
       "parameters": {
-        "__IMTCONN__": 12296618
+        "__IMTCONN__": "REMOVED"
       },
       "mapper": {
         "from": "drive",
@@ -90,14 +82,6 @@
           "x": 300,
           "y": 0
         },
-        "setupValidation": {
-          "result": {
-            "valid": true,
-            "fields": []
-          },
-          "version": 1,
-          "configuration": "8ca1ecb64bfc0289"
-        },
         "restore": {
           "expect": {
             "from": {
@@ -111,7 +95,7 @@
             },
             "spreadsheetId": {
               "path": [
-                "GEO_AI_진단관리"
+                "REMOVED"
               ]
             },
             "includesHeaders": {
@@ -138,7 +122,7 @@
                 "scoped": "true",
                 "connection": "google"
               },
-              "label": "Yujin's Google connection"
+              "label": "REMOVED"
             }
           }
         },
@@ -410,7 +394,7 @@
       "module": "google-sheets:addRow",
       "version": 2,
       "parameters": {
-        "__IMTCONN__": 12296618
+        "__IMTCONN__": "REMOVED"
       },
       "filter": {
         "name": "이메일 수집 동의자만 저장",
@@ -451,14 +435,6 @@
           "x": 600,
           "y": 0
         },
-        "setupValidation": {
-          "result": {
-            "valid": true,
-            "fields": []
-          },
-          "version": 1,
-          "configuration": "6b98cd3605b318da"
-        },
         "restore": {
           "expect": {
             "from": {
@@ -472,7 +448,7 @@
             },
             "spreadsheetId": {
               "path": [
-                "GEO_AI_진단관리"
+                "REMOVED"
               ]
             },
             "includesHeaders": {
@@ -499,7 +475,7 @@
                 "scoped": "true",
                 "connection": "google"
               },
-              "label": "Yujin's Google connection (REMOVED)"
+              "label": "REMOVED"
             }
           }
         },
@@ -758,7 +734,7 @@
       "module": "google-email:sendAnEmail",
       "version": 4,
       "parameters": {
-        "__IMTCONN__": 9452533
+        "__IMTCONN__": "REMOVED"
       },
       "mapper": {
         "to": [
@@ -768,7 +744,7 @@
         "bodyType": "collection",
         "contents": [
           {
-            "text": "안녕하세요. GEO AI 매장 검색 노출 진단 서비스입니다.\r\n\r\n신청하신 매장의 AI 검색 노출 진단 결과를 안내드립니다.\r\n\r\n■ 매장 정보\r\n상호명: {{1.store}}\r\n지역: {{1.region}}\r\n대표 메뉴: {{1.menus}}\r\n\r\n■ AI 검색 노출 진단 결과\r\n전체 AI 언급률: {{1.mention_rate}}%\r\n언급 결과: {{1.mention_text}}\n\n■ 질문 유형별 언급률\r\n{{1.by_type_text}}\n\n■ 주요 경쟁 매장\r\n{{1.mention_text}}\r\n\r\n■ AI 검색 노출 개선 제안\r\n{{1.suggestions_text}}\r\n\r\n■ 안내 사항\r\n{{1.notice}}\n\r\n본 결과는 AI 검색 응답을 기반으로 작성되었으며, 실제 검색 결과와 차이가 있을 수 있습니다.\r\n\r\n감사합니다.\r\nGEO AI 진단 서비스",
+            "text": "안녕하세요. GEO AI 매장 검색 노출 진단 서비스입니다.\r\n\r\n신청하신 매장의 AI 검색 노출 진단 결과를 안내드립니다.\r\n\r\n■ 매장 정보\r\n상호명: {{1.store}}\r\n지역: {{1.region}}\r\n대표 메뉴: {{1.menus}}\r\n\r\n■ AI 검색 노출 진단 결과\r\n전체 AI 언급률: {{1.mention_rate}}%\r\n언급 결과: {{1.mention_text}}\n\n■ 질문 유형별 언급률\r\n{{1.by_type_text}}\n\n■ 주요 경쟁 매장\n{{1.competitors_text}}\n\n■ AI 추가 진단\n{{1.agent_text}}\r\n\r\n■ AI 검색 노출 개선 제안\r\n{{1.suggestions_text}}\r\n\r\n■ 안내 사항\r\n{{1.notice}}\n\r\n본 결과는 AI 검색 응답을 기반으로 작성되었으며, 실제 검색 결과와 차이가 있을 수 있습니다.\r\n\r\n감사합니다.\r\nGEO AI 진단 서비스",
             "image": {}
           }
         ]
@@ -778,34 +754,41 @@
           "x": 900,
           "y": 0
         },
-        "setupValidation": {
-          "result": {
-            "valid": true,
-            "fields": []
-          },
-          "version": 1,
-          "configuration": "40f6d0077020fd8d"
-        },
         "restore": {
+          "parameters": {
+            "__IMTCONN__": {
+              "label": "REMOVED",
+              "data": {
+                "scoped": "true",
+                "connection": "google-email"
+              }
+            }
+          },
           "expect": {
-            "cc": {
-              "mode": "chose"
-            },
             "to": {
               "mode": "chose",
               "items": [
                 null
               ]
             },
-            "bcc": {
+            "bodyType": {
+              "label": "Collection of contents (text, images, etc.)"
+            },
+            "attachments": {
               "mode": "chose"
             },
             "from": {
               "mode": "chose",
               "label": "Empty"
             },
-            "bodyType": {
-              "label": "Collection of contents (text, images, etc.)"
+            "cc": {
+              "mode": "chose"
+            },
+            "bcc": {
+              "mode": "chose"
+            },
+            "emailHeaders": {
+              "mode": "chose"
             },
             "contents": {
               "mode": "chose",
@@ -815,21 +798,6 @@
             },
             "signature": {
               "mode": "edit"
-            },
-            "attachments": {
-              "mode": "chose"
-            },
-            "emailHeaders": {
-              "mode": "chose"
-            }
-          },
-          "parameters": {
-            "__IMTCONN__": {
-              "data": {
-                "scoped": "true",
-                "connection": "google-email"
-              },
-              "label": "Gmail connection (REMOVED)"
             }
           }
         },
@@ -844,16 +812,16 @@
         "expect": [
           {
             "name": "to",
+            "type": "array",
+            "label": "To",
+            "required": true,
             "spec": {
-              "name": "value",
               "type": "email",
               "label": "Recipient email address",
               "required": true,
-              "validate": true
-            },
-            "type": "array",
-            "label": "To",
-            "required": true
+              "validate": true,
+              "name": "value"
+            }
           },
           {
             "name": "subject",
@@ -874,8 +842,9 @@
           },
           {
             "name": "attachments",
+            "type": "array",
+            "label": "Attachments",
             "spec": {
-              "name": "value",
               "spec": [
                 {
                   "name": "filename",
@@ -893,10 +862,9 @@
                 }
               ],
               "type": "collection",
-              "label": "Attachment"
-            },
-            "type": "array",
-            "label": "Attachments"
+              "label": "Attachment",
+              "name": "value"
+            }
           },
           {
             "name": "from",
@@ -905,28 +873,29 @@
           },
           {
             "name": "cc",
-            "spec": {
-              "name": "value",
-              "type": "email",
-              "label": "Recipient email address"
-            },
             "type": "array",
-            "label": "CC recipients"
+            "label": "CC recipients",
+            "spec": {
+              "type": "email",
+              "label": "Recipient email address",
+              "name": "value"
+            }
           },
           {
             "name": "bcc",
-            "spec": {
-              "name": "value",
-              "type": "email",
-              "label": "Recipient email address"
-            },
             "type": "array",
-            "label": "BCC recipients"
+            "label": "BCC recipients",
+            "spec": {
+              "type": "email",
+              "label": "Recipient email address",
+              "name": "value"
+            }
           },
           {
             "name": "emailHeaders",
+            "type": "array",
+            "label": "Additional email headers",
             "spec": {
-              "name": "value",
               "spec": [
                 {
                   "name": "key",
@@ -941,15 +910,15 @@
                 }
               ],
               "type": "collection",
-              "label": "Email header"
-            },
-            "type": "array",
-            "label": "Additional email headers"
+              "label": "Email header",
+              "name": "value"
+            }
           },
           {
             "name": "contents",
+            "type": "array",
+            "label": "Body contents",
             "spec": {
-              "name": "value",
               "spec": [
                 {
                   "name": "text",
@@ -987,10 +956,9 @@
                 }
               ],
               "type": "collection",
-              "label": "Content"
-            },
-            "type": "array",
-            "label": "Body contents"
+              "label": "Content",
+              "name": "value"
+            }
           },
           {
             "name": "signature",
