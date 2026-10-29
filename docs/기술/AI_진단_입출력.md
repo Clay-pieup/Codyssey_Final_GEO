@@ -1,7 +1,7 @@
 # AI 진단 입출력 명세 (run_diagnosis · run_more)
 
 > AI 담당 작성 · 2026-10-19 · 서버(팀장)가 AI 진단을 부를 때 쓰는 약속
-> 코드: [`ai/diagnosis.py`](../ai/diagnosis.py)의 `run_diagnosis()`, `run_more()`
+> 코드: [`ai/diagnosis.py`](../../ai/diagnosis.py)의 `run_diagnosis()`, `run_more()`
 > 10/20: "더 자세히 진단하기" 버튼용 `run_more()` 추가(7장), Agent 칸 실제 모양 반영(5장), 호출 수 51회로 정정, `model` 칸에 실제 모델 이름
 > 실행 환경: **Python 3.10 이상** (코드에 `str | None` 문법 사용)
 
