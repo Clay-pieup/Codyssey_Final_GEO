@@ -2,29 +2,13 @@ import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   ArrowRight, BarChart3, Bot, CheckCircle2, ChevronRight, CircleHelp,
-  ChevronDown, ClipboardCheck, Compass, Mail, MapPin, Search, ShieldCheck, Store,
+  ClipboardCheck, Compass, Mail, MapPin, Search, ShieldCheck, Store,
   User, Utensils, WandSparkles, X
 } from "lucide-react";
 import { ReportHero, ReportOverview } from "./ReportDashboard.jsx";
 import { ReportSuggestions } from "./ReportSuggestions.jsx";
+import { ReportQuestions } from "./ReportQuestions.jsx";
 import "./styles.css";
-
-// ---------- 결과 리포트 계산 (화면 담당과 현장 논의, 10/31) ----------
-
-// 출처 사이트 이름: 주소는 Google 중간 주소일 수 있어 서버가 준 사이트 이름(source_sites)을 먼저 씀
-function siteNames(answer) {
-  const names = (answer.sources || []).map((url, i) => {
-    const site = (answer.source_sites || [])[i];
-    if (site) return site.replace(/^www\./, "");
-    try {
-      const host = new URL(url).hostname;
-      return host.includes("google") ? "" : host.replace(/^www\./, "");
-    } catch {
-      return "";
-    }
-  });
-  return [...new Set(names.filter(Boolean))];
-}
 
 // ---------- 사장님 의견 팝업 (피드백, 10/31 화면 담당과 현장 논의) ----------
 const EMPTY_FEEDBACK = { clarity: 0, accuracy: "", competitors: "", useful: "", comment: "", name: "", email: "", consent: false };
@@ -46,6 +30,7 @@ function Choice({ label, options, value, onPick, hint }) {
   );
 }
 
+// ---------- 결과 리포트 계산 ----------
 // 질문 10개마다 답변 3개를 묶어 "정상 답변 중 몇 번 언급"을 센다 (서버가 Make에 보내는 질문별 결과와 같은 방식)
 function questionRows(report) {
   return (report.questions || []).map((q) => {
@@ -67,7 +52,6 @@ menu: ""
   const [isDiagnosing, setIsDiagnosing] = useState(false);
   const [moreError, setMoreError] = useState("");
   const [isRunningMore, setIsRunningMore] = useState(false);
-  const [openQuestion, setOpenQuestion] = useState(null); // 결과에서 펼친 질문 (답변 원문 보기)
 
   const update = (key, value) => {
     setForm((old) => ({ ...old, [key]: value }));
@@ -179,7 +163,6 @@ menu: ""
       }
 
       setDiagnosisResult(report);
-      setOpenQuestion(null);
       setShowResult(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error) {
@@ -243,8 +226,6 @@ menu: ""
 
   // 결과 리포트에 쓰는 값 (결과 화면은 진단이 성공했을 때만 보임)
   const report = diagnosisResult || {};
-  const summary = report.summary || {};
-  const mention = summary.mention || {};
   const rows = questionRows(report);
 
   // 사장님 의견 팝업: 리포트 맨 아래(결과 메일과 안내)까지 보면 한 번만 열림
@@ -457,71 +438,8 @@ menu: ""
           <ReportHero report={report} />
           <ReportOverview report={report} rows={rows} />
 
-          {/* 4. 질문별 결과 + AI 답변 원문 */}
-          <section className="result-section">
-            <div className="result-section-title"><h2>AI에게 물어본 질문 {rows.length}개</h2><span>질문을 누르면 AI 답변 원문</span></div>
-            <ol className="question-list">
-              {rows.map((q) => (
-                <li key={q.id}>
-                  <button type="button" className="question-row" aria-expanded={openQuestion === q.id} onClick={() => setOpenQuestion(openQuestion === q.id ? null : q.id)}>
-                    <span className="question-type">{q.type}</span>
-                    <span className="question-text">{q.text}</span>
-                    <span className={q.hit > 0 ? "hit-badge yes" : "hit-badge"}>{q.valid ? `${q.valid}번 중 ${q.hit}번 언급` : "답변 없음"}</span>
-                    <ChevronDown size={16} className={openQuestion === q.id ? "chevron open" : "chevron"} />
-                  </button>
-                  {openQuestion === q.id && (
-                    <div className="answer-list">
-                      {q.answers.map((a) => (
-                        <div className="answer-item" key={a.run}>
-                          <div className="answer-head">
-                            <strong>{a.run}번째 답변</strong>
-                            <span className={a.status === "ok" && a.mentioned ? "yes" : ""}>
-                              {a.status !== "ok" ? "답변 실패 (언급률 계산에서 제외)" : a.mentioned ? `우리 가게 언급${a.rank ? ` · ${a.rank}위` : ""}` : "언급 없음"}
-                            </span>
-                          </div>
-                          {a.text && <p className="answer-text">{a.text.replace(/\*\*/g, "")}</p>}
-                          {siteNames(a).length > 0 && <p className="answer-sources">출처: {siteNames(a).slice(0, 5).join(", ")}</p>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ol>
-          </section>
-
-          {/* 5. AI가 우리 가게를 소개한 말 (사장님 설문 "소개한 말이 실제와 맞았나요?"와 연결) */}
-          <section className="result-section">
-            <div className="result-section-title"><h2>AI가 우리 가게를 소개한 말</h2></div>
-            {(summary.descriptions || []).length > 0 ? (
-              <ul className="quote-list">
-                {summary.descriptions.map((d, i) => (
-                  <li key={i}>“{d.text}” <small>{d.count}번</small></li>
-                ))}
-              </ul>
-            ) : (
-              <p className="muted">AI 답변에서 우리 가게를 소개한 말이 없어요{mention.mentioned ? "" : " (우리 가게가 언급된 답변이 없음)"}.</p>
-            )}
-          </section>
-
-          {/* 6. 함께 나온 가게 */}
-          <section className="result-section">
-            <div className="result-section-title"><h2>AI 답변에 함께 나온 가게</h2></div>
-            {(summary.competitors || []).length > 0 ? (
-              summary.competitors.slice(0, 3).map((c, index) => (
-                <div className="recommendation" key={index}>
-                  <span className="recommend-number">{String(index + 1).padStart(2, "0")}</span>
-                  <div>
-                    <strong>{c.name}</strong>
-                    <p>{c.description || "소개 문장 없음"}</p>
-                    <small>함께 나온 답변 {c.answers ?? 0}개</small>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="muted">함께 나온 다른 가게가 없어요.</p>
-            )}
-          </section>
+          {/* 3. 질문별 AI 답변 (리포트 개편 단위 4: ReportQuestions.jsx). "소개한 말"·"함께 나온 가게" 칸은 한눈에 보기 카드로 옮김 */}
+          <ReportQuestions report={report} rows={rows} key={report.input?.store + (report.answers || []).length} />
 
           {/* 7. AI 추가 진단 (Agent) */}
           {report.agent?.ran && (

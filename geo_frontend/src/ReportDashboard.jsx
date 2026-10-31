@@ -153,6 +153,9 @@ export function ReportOverview({ report, rows }) {
       : <><b className="bad">{josa(top.name, "이", "가")}</b> 우리보다 조금 더 많이 나왔어요</>;
   }
 
+  // 1-2) AI가 우리 가게를 소개한 말: 가장 많이 쓴 소개 문장 3개 (서버가 셈)
+  const quotes = (summary.descriptions || []).slice(0, 3);
+
   // 2) 순위 분포: 여러 가게를 나열한 답변에서 몇 번째였나
   const ranked = okAnswers.filter((a) => a.mentioned);
   const rankRows = [
@@ -218,7 +221,7 @@ export function ReportOverview({ report, rows }) {
 
   return (
     <section className="rp-overview">
-      <div className="rp-head"><h2>한눈에 보기</h2><p>AI 답변 {valid}개를 일곱 가지로 나눠 봤어요.</p></div>
+      <div className="rp-head"><h2>한눈에 보기</h2><p>AI 답변 {valid}개를 여덟 가지로 나눠 봤어요.</p></div>
       <div className="rp-bento">
         <Tile size="w3" kicker="AI 노출률" title={rate == null ? "노출률을 계산하지 못했어요" : <>노출률 <b>{rate}%</b>, {grade?.name === "강함" ? "잘 나오는 편이에요" : grade?.name === "보통" ? "보통이에요" : "아직 약한 편이에요"}</>}>
           <div className="rp-scale">
@@ -229,14 +232,37 @@ export function ReportOverview({ report, rows }) {
           <p className="rp-sub">정상 답변 {valid}개 중 {mentioned}개에서 우리 가게가 나왔어요. 등급은 해외 GEO 측정 가이드의 참고 기준이에요.</p>
         </Tile>
 
-        <Tile size="w3" kicker="답변 속 가게 점유율" title={shareTitle}>
-          <div className="rp-row">
-            <Ring parts={share} />
-            <div className="rp-legend">
-              {share.map((p) => (
-                <span key={p.label} className={p.us ? "us" : ""}><i style={{ background: p.color }} />{p.label}<b>{shareTotal ? Math.round((p.value / shareTotal) * 100) : 0}%</b></span>
-              ))}
+        {/* 카드 이름은 의견 팝업 2번 질문("'AI가 우리 가게를 소개한 말'이 실제 가게와 맞았나요?")과 같게 */}
+        <Tile size="w3" kicker="AI가 우리 가게를 소개한 말" title={quotes.length ? "AI는 우리 가게를 이렇게 소개해요" : "AI 답변에서 우리 가게를 소개한 말이 없어요"}>
+          {quotes.length > 0 ? (
+            <div className="rp-quotes">
+              {quotes.map((d) => <p key={d.text}>“{d.text}”<span>{d.count}번</span></p>)}
             </div>
+          ) : <p className="rp-sub">{mentioned ? "우리 가게가 나온 답변에 소개 문장이 없었어요." : "우리 가게가 나온 답변이 없어요."}</p>}
+        </Tile>
+
+        {/* 카드 이름은 의견 팝업 3번 질문("'AI 답변에 함께 나온 가게'가 실제 경쟁 가게와 비슷했나요?")과 같게 */}
+        <Tile size="w6" kicker="AI 답변에 함께 나온 가게 · 점유율" title={shareTitle}>
+          <div className="rp-share">
+            <div className="rp-row">
+              <Ring parts={share} />
+              <div className="rp-legend">
+                {share.map((p) => (
+                  <span key={p.label} className={p.us ? "us" : ""}><i style={{ background: p.color }} />{p.label}<b>{shareTotal ? Math.round((p.value / shareTotal) * 100) : 0}%</b></span>
+                ))}
+              </div>
+            </div>
+            {competitors.length > 0 && (
+              <ol className="rp-shops">
+                {competitors.map((c, i) => (
+                  <li key={c.name}>
+                    <span className="rp-shop-no" style={{ background: grey[i] }}>{i + 1}</span>
+                    <span className="rp-shop-body"><strong>{c.name}</strong><span>{c.description || "소개 문장 없음"}</span></span>
+                    <b>답변 {c.answers ?? 0}개</b>
+                  </li>
+                ))}
+              </ol>
+            )}
           </div>
         </Tile>
 
