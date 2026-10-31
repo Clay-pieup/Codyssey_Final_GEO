@@ -3,13 +3,15 @@
 근거: docs/ARCHITECTURE.md 5장 (POST /api/feedback), 진행 기록 10/31 (피드백 팝업 결정)
 - 문항은 리포트 영역(결과 이해, AI가 소개한 말, 함께 나온 가게, 개선 제안)에 맞춘 5개
 - 의견 시트에는 이름·이메일을 넣지 않는다 (진단결과·연락처 시트를 나눈 것과 같은 원칙). 이름·이메일은 리포트 메일 발송(Make)에만 쓴다
-- 저장 주소(FEEDBACK_WEBHOOK_URL)는 JSON을 POST로 받는 곳이면 됨 (Make 웹훅 또는 구글 Apps Script 웹 앱)
-- 보낼 때 실패하면 사장님께 "다시 보내 주세요"를 보여 주고, 주소·내용은 로그에 남기지 않는다
+- 저장 주소(FEEDBACK_WEBHOOK_URL)는 구글 Apps Script 웹 앱(automation/feedback_sheet.gs). 시트에 적으면 "ok"라고 답한다
+- 저장 성공은 그 "ok" 답을 받았을 때만 (10/31: 구글 로그인 화면이 대신 열려도 성공으로 착각하던 문제 수정)
+- 실패하면 Vercel 로그에 "[feedback] 이유" 한 줄을 남긴다. 주소·의견 내용은 남기지 않는다 (사장님 화면은 그대로)
 """
 
 import json
 import os
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
@@ -72,8 +74,10 @@ def check_feedback(data: dict, report: dict) -> tuple[dict | None, list[str]]:
 
 def send_feedback(feedback: dict) -> dict:
     """의견을 피드백 저장 주소로 보낸다. {"ok": 저장 성공 여부, "error": 안내 문장}"""
+    failed = {"ok": False, "error": "의견을 저장하지 못했어요."}
     url = os.getenv("FEEDBACK_WEBHOOK_URL", "").strip()
     if not url:
+        print("[feedback] FEEDBACK_WEBHOOK_URL이 비어 있음 → Vercel 환경 변수 저장 후 Redeploy 했는지 확인")
         return {"ok": False, "error": "의견 저장이 아직 준비되지 않았어요."}
 
     payload = {"event": "feedback", "submitted_at": datetime.now(KST).strftime("%Y-%m-%d %H:%M"), **feedback}
@@ -82,10 +86,21 @@ def send_feedback(feedback: dict) -> dict:
         headers={"Content-Type": "application/json; charset=utf-8"},
     )
     try:
+        # Apps Script는 기록한 뒤 다른 주소로 한 번 넘겨서(redirect) "ok"를 보여 준다. urlopen이 그 주소까지 따라감
         with urllib.request.urlopen(request, timeout=TIMEOUT_SEC) as response:
-            if 200 <= response.status < 300:
-                return {"ok": True, "error": ""}
-            print(f"[feedback] 저장 주소 응답 {response.status}")
+            landed = urllib.parse.urlparse(response.geturl()).hostname or ""  # 마지막에 도착한 곳 (주소 뒷부분은 버림)
+            answer = response.read(200).decode("utf-8", "replace").strip()
+    except urllib.error.HTTPError as e:
+        print(f"[feedback] 저장 주소 응답 {e.code} → Apps Script 웹 앱 주소(/exec)가 맞는지 확인")
+        return failed
     except (urllib.error.URLError, TimeoutError, OSError) as e:
-        print(f"[feedback] 저장 실패: {type(e).__name__}")  # 주소·의견 내용은 남기지 않음
-    return {"ok": False, "error": "의견을 저장하지 못했어요."}
+        print(f"[feedback] 저장 주소에 연결 실패: {type(e).__name__}")
+        return failed
+
+    if answer == "ok":                                   # feedback_sheet.gs가 시트에 한 줄 적고 돌려주는 답
+        return {"ok": True, "error": ""}
+    if landed.endswith("accounts.google.com"):            # 공개 범위가 '모든 사용자'가 아니면 로그인 화면으로 감
+        print("[feedback] 구글 로그인 화면으로 이동됨 → Apps Script 배포의 액세스 권한을 '모든 사용자'로")
+    else:                                                 # 시트 기록 중 오류, 옛 버전 배포, 다른 주소 등
+        print(f"[feedback] 'ok' 대신 다른 답을 받음 (도착한 곳: {landed}) → Apps Script 실행 기록과 배포 버전 확인")
+    return failed
