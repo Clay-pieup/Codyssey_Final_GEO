@@ -71,3 +71,17 @@ footer { display:flex; justify-content:space-between; align-items:center; gap:12
 @media (max-width: 520px) {
   .topbar { height:62px; padding:0 17px; }.topbar-right { font-size:0; gap:4px; }.topbar-right .status-dot { display:none; }.topbar-right .icon-button { margin:0; }.brand { font-size:20px; }main { padding:0 15px; }.hero { padding:35px 2px 20px; }.hero h1 { font-size:35px; }.hero-desc { font-size:12px; }.hero-points { gap:10px; }.hero-points span { font-size:10px; }.hero-visual { transform:scale(.88); margin:-3px -20px; }.form-card { padding:22px 17px; }.form-heading h3 { font-size:18px; }.result-cards { grid-template-columns:1fr; }.metric-card { padding:16px; }.result-header h1 { font-size:22px; }.result-header { align-items:flex-start; }.result-actions { flex-direction:column-reverse; }.result-actions .submit-button,.secondary-button { width:100%; }.result-section { padding:18px; }footer { padding:20px 16px; flex-wrap:wrap; }footer span:nth-child(2) { order:3; width:100%; }
 }
+
+/* 가게 검색 (10/31) */
+.search-row { display:flex; gap:8px; }
+.search-row .input-wrap { flex:1; min-width:0; }
+.search-button { display:flex; align-items:center; gap:6px; flex-shrink:0; height:46px; padding:0 16px; border:1px solid #d9d4fb; border-radius:9px; background:#f4f2ff; color:#5948c8; font-size:12px; font-weight:700; cursor:pointer; }
+.search-button:disabled { opacity:.6; cursor:default; }
+.place-list { list-style:none; margin:8px 0 0; padding:0; border:1px solid #e5e7ef; border-radius:9px; overflow:hidden; background:#fff; }
+.place-list li + li { border-top:1px solid #f0f1f6; }
+.place-item { display:flex; flex-direction:column; align-items:flex-start; gap:3px; width:100%; padding:10px 13px; border:0; background:transparent; text-align:left; cursor:pointer; }
+.place-item:hover, .place-item:focus { background:#f7f6ff; outline:none; }
+.place-item strong { color:#252941; font-size:12px; }
+.place-item span { color:#8879e8; font-size:10px; }
+.place-item small { color:#9297a7; font-size:10px; }
+.place-message { margin:7px 0 0; color:#b4561f; font-size:10px; }

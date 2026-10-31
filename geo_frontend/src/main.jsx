@@ -28,6 +28,46 @@ consent: false
     setError("");
   };
 
+  // 가게 검색: 서버(/api/places)가 네이버 지역 검색을 대신 호출 → 고르면 가게 이름·지역 자동 입력
+  const [places, setPlaces] = useState([]);           // 검색 결과 목록 (최대 5개)
+  const [placeMessage, setPlaceMessage] = useState(""); // 결과 없음·실패·지역 직접 입력 안내
+  const [isSearching, setIsSearching] = useState(false);
+  const [pickedPlace, setPickedPlace] = useState(null); // 고른 가게 (도로명 주소 확인용)
+
+  const searchPlaces = async () => {
+    const query = form.storeName.trim();
+    if (query.length < 2) {
+      setPlaceMessage("가게 이름을 2자 이상 입력한 뒤 검색해 주세요.");
+      return;
+    }
+    setIsSearching(true);
+    setPlaces([]);
+    setPlaceMessage("");
+    try {
+      const response = await fetch("/api/places", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+      const data = await response.json();
+      setPlaces(data.places || []);
+      setPlaceMessage(data.error || "");  // 검색이 실패해도 직접 입력으로 진단은 계속 가능
+    } catch (e) {
+      setPlaceMessage("가게 검색에 실패했어요. 직접 입력해 주세요.");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const pickPlace = (place) => {
+    // 지역을 못 찾은 가게(예: 충무로2가)는 지역 칸을 그대로 두고 직접 입력 안내
+    setForm((old) => ({ ...old, storeName: place.name, region: place.region || old.region }));
+    setPickedPlace(place);
+    setPlaces([]);
+    setPlaceMessage(place.region ? "" : place.region_note);
+    setError("");
+  };
+
   const startDiagnosis = async (event) => {
     event.preventDefault();
     if (!form.storeName.trim() || !form.region.trim() || !form.menu.trim() ) {
@@ -223,10 +263,41 @@ consent: false
                   <span className="required-note">* 필수 입력</span>
                 </div>
                 <label htmlFor="storeName">가게 이름 <span>*</span></label>
-                <div className="input-wrap"><Store size={18} /><input id="storeName" value={form.storeName} onChange={(e) => update("storeName", e.target.value)} placeholder="예: 소담 돈가스" maxLength={30} /></div>
+                <div className="search-row">
+                  <div className="input-wrap">
+                    <Store size={18} />
+                    <input
+                      id="storeName"
+                      value={form.storeName}
+                      onChange={(e) => { update("storeName", e.target.value); setPickedPlace(null); }}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); searchPlaces(); } }}
+                      placeholder="예: 명동교자 명동"
+                      maxLength={30}
+                    />
+                  </div>
+                  <button type="button" className="search-button" onClick={searchPlaces} disabled={isSearching}>
+                    <Search size={16} /> {isSearching ? "검색 중…" : "검색"}
+                  </button>
+                </div>
+                <p className="field-help">가게 이름과 동네를 함께 넣고 [검색]을 누르면 지역이 자동으로 채워집니다. 목록에 없으면 직접 입력해도 됩니다.</p>
+                {places.length > 0 && (
+                  <ul className="place-list">
+                    {places.map((place, index) => (
+                      <li key={index}>
+                        <button type="button" className="place-item" onClick={() => pickPlace(place)}>
+                          <strong>{place.name}</strong>
+                          <span>{place.category}</span>
+                          <small>{place.road_address || place.address}</small>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {placeMessage && <p className="place-message">{placeMessage}</p>}
 
                 <label htmlFor="region">지역 <span>*</span></label>
                 <div className="input-wrap"><MapPin size={18} /><input id="region" value={form.region} onChange={(e) => update("region", e.target.value)} placeholder="예: 창원시 성산구 상남동" maxLength={100} /></div>
+                {pickedPlace && <p className="field-help">고른 가게 주소: {pickedPlace.road_address || pickedPlace.address}</p>}
 
                 <label htmlFor="menu">대표 메뉴 <span>*</span></label>
                 <div className="input-wrap"><Utensils size={18} /><input id="menu" value={form.menu} onChange={(e) => update("menu", e.target.value)} placeholder="예: 돈가스, 냉모밀, 카레" maxLength={150} /></div>
