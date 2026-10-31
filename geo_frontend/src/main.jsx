@@ -153,7 +153,7 @@ consent: false
       <header className="topbar">
         <a className="brand" href="#" onClick={(e) => { e.preventDefault(); reset(); }}>
           <span className="brand-mark"><Compass size={21} /></span>
-          <span>geo<span className="brand-dot">.</span>check</span>
+          <span>우리가게 <span className="brand-dot">AI</span> 점검</span>
         </a>
         <div className="topbar-right">
           <span className="status-dot" /> 외식업 매장 AI 노출 진단
@@ -295,7 +295,7 @@ consent: false
               <div className="feature"><div className="feature-icon green"><ClipboardCheck size={21} /></div><div><strong>개선 방향 제안</strong><p>실행할 수 있는 다음 행동을 안내</p></div></div>
             </section>
           </main>
-          <footer><span>geo.check</span><span>GEO 진단 서비스 · 개발 중인 시제품</span><button onClick={() => setShowHelp(!showHelp)}>서비스 안내</button></footer>
+          <footer><span>우리가게 AI 점검</span><span>GEO 진단 서비스 · 개발 중인 시제품</span><button onClick={() => setShowHelp(!showHelp)}>서비스 안내</button></footer>
         </>
       ) : (
         <main className="result-page">
@@ -514,7 +514,7 @@ consent: false
 )}
 </div>
           <footer>
-  <span>geo.check</span>
+  <span>우리가게 AI 점검</span>
   <span>
     {diagnosisResult?.ok
       ? "실제 AI 진단 결과"
