@@ -58,9 +58,7 @@ function App() {
   const [form, setForm] = useState({
     storeName: "",
 region: "",
-menu: "",
-email: "",
-consent: false
+menu: ""
   });
   const [showResult, setShowResult] = useState(false);
   const [error, setError] = useState("");
@@ -133,16 +131,7 @@ consent: false
        return;
     }
 
-    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-      setError("이메일 주소를 확인해 주세요.");
-      return;
-    }
-    
-    if (form.email.trim() && !form.consent) {
-       setError("이메일로 결과를 받으려면 개인정보 수집·이용에 동의해 주세요.");
-       return;
-    }
-    
+    // 이메일은 입력 화면에서 받지 않음 → 리포트 끝 의견 팝업에서 동의와 함께 받음 (10/31)
             setError("");
     setDiagnosisResult(null);
     setIsDiagnosing(true);
@@ -157,8 +146,6 @@ consent: false
           store: form.storeName.trim(),
           region: form.region.trim(),
           menus,
-          email: form.email.trim(),
-          consent: form.consent,
         }),
       });
 
@@ -213,8 +200,6 @@ consent: false
       },
       body: JSON.stringify({
         report: diagnosisResult,
-        email: form.email.trim(),
-        consent: form.consent,
       }),
     });
 
@@ -243,7 +228,6 @@ consent: false
   const mention = summary.mention || {};
   const answers = report.answers || [];
   const settings = report.settings || {};
-  const delivery = report.delivery || {};
   const rows = questionRows(report);
 
   // 사장님 의견 팝업: 리포트 맨 아래(결과 메일과 안내)까지 보면 한 번만 열림
@@ -276,11 +260,7 @@ consent: false
     setFeedbackError("");
   };
 
-  // 팝업을 열 때 입력 화면에서 동의하고 넣은 이메일이 있으면 미리 채움
-  const openFeedback = () => {
-    setFeedback((old) => ({ ...old, email: old.email || (form.consent ? form.email.trim() : "") }));
-    setFeedbackOpen(true);
-  };
+  const openFeedback = () => setFeedbackOpen(true);
 
   const sendFeedback = async () => {
     if (!feedback.clarity || !feedback.accuracy || !feedback.competitors || !feedback.useful) {
@@ -381,10 +361,10 @@ consent: false
               <div className="intro-column">
                 <div className="section-kicker">START YOUR CHECKUP</div>
                 <h2>우리 가게 정보 입력</h2>
-                <p className="section-desc">매장 정보를 입력해 주세요.<br />이메일을 입력하고 개인정보 수집·이용에 동의하시면, 서비스 연동 후 진단 결과를 이메일로 받아보실 수 있습니다.</p>
+                <p className="section-desc">매장 정보를 입력해 주세요.<br />진단이 끝난 뒤 리포트 아래에서 의견을 남겨 주시면, 리포트를 메일로 보내 드려요.</p>
                 <div className="privacy-note">
                   <ShieldCheck size={20} />
-                  <div><strong>정보는 안전하게 관리합니다</strong><p>이메일은 결과 발송 목적으로만 사용하며, 동의 여부를 확인한 후 처리합니다.</p></div>
+                  <div><strong>정보는 안전하게 관리합니다</strong><p>이름·이메일은 리포트를 메일로 받을 때만, 동의를 받은 뒤 사용합니다.</p></div>
                 </div>
                 <div className="steps">
                   <div className="step-item"><span className="step-number">01</span><div><strong>매장 정보 입력</strong><p>상호 · 지역 · 대표 메뉴</p></div></div>
@@ -439,29 +419,6 @@ consent: false
                 <div className="input-wrap"><Utensils size={18} /><input id="menu" value={form.menu} onChange={(e) => update("menu", e.target.value)} placeholder="예: 돈가스, 냉모밀, 카레" maxLength={150} /></div>
                 <p className="field-help">메뉴는 쉼표로 구분해 여러 개 입력할 수 있습니다.</p>
 
-                <div className="form-divider" />
-                <label htmlFor="email">결과 받을 이메일 (선택)</label>
-                <div className="input-wrap"><Mail size={18} /><input id="email" type="email" value={form.email} onChange={(e) => update("email", e.target.value)} placeholder="name@example.com" maxLength={254} disabled={!form.consent} />
-                </div>
-                <div className="consent-box">
-                  <label className="consent-label">
-                    <input
-  type="checkbox"
-  checked={form.consent}
-  onChange={(e) => {
-    const checked = e.target.checked;
-    setForm((old) => ({
-      ...old,
-      consent: checked,
-      email: checked ? old.email : ""
-    }));
-    setError("");
-  }}
-/>
-                    <span className="custom-checkbox"><CheckCircle2 size={15} /></span>
-                    <span><strong>개인정보 수집·이용에 동의합니다.</strong><small>수집 항목: 이메일 주소 · 목적: 진단 결과 발송 · 보관: 2026-11-24 파기 · 동의를 거부할 수 있으며, 거부 시 이메일 결과 발송이 제한됩니다.</small></span>
-                  </label>
-                </div>
                 {error && <p className="error-message" role="alert">{error}</p>}
                 <button
   className="submit-button"
@@ -476,7 +433,7 @@ consent: false
     </>
   )}
 </button>
-                <p className="form-footnote"><ShieldCheck size={14} /> 진단 결과는 AI가 생성한 추정치입니다. 이메일은 동의한 경우에만 결과 발송에 사용합니다.</p>
+                <p className="form-footnote"><ShieldCheck size={14} /> 진단 결과는 AI가 생성한 추정치입니다.</p>
               </form>
             </section>
 
@@ -657,11 +614,11 @@ consent: false
             <div className="result-section-title"><h2>결과 메일과 안내</h2></div>
             <p className="muted">
               <Mail size={14} />{" "}
-              {!delivery.requested
-                ? "이메일을 입력하지 않아 결과 메일은 보내지 않았어요."
-                : delivery.sent
-                  ? "입력하신 이메일로 결과를 보냈어요. 몇 분 안에 도착해요."
-                  : "결과 메일을 보내지 못했어요. 이 화면을 저장해 두세요."}
+              {feedbackState === "done"
+                ? feedbackResult?.mail_sent
+                  ? `리포트를 ${feedback.email.trim()}(으)로 보냈어요. 몇 분 안에 도착해요.`
+                  : "리포트 메일을 보내지 못했어요. 이 화면을 저장해 두세요."
+                : "아래 [의견 남기고 리포트 받기]로 의견을 남겨 주시면 이 리포트를 메일로 보내 드려요."}
             </p>
             {report.notice && <p className="muted">{report.notice}</p>}
           </section>

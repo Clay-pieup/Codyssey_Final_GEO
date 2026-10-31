@@ -57,7 +57,7 @@ sequenceDiagram
 
 | 단계 | 무엇을 | 왜 이렇게 | 코드 |
 | :-: | --- | --- | --- |
-| ① | 필수 칸·메뉴 1~3개·이메일 형식·동의 검사 | 잘못된 입력으로 AI를 부르면 돈·시간 낭비 | `geo_frontend/src/main.jsx` |
+| ① | 필수 칸·메뉴 1~3개 검사 (이메일은 10/31부터 결과 리포트 끝 의견 팝업에서만 받음) | 잘못된 입력으로 AI를 부르면 돈·시간 낭비 | `geo_frontend/src/main.jsx` |
 | ② | 서버가 형식을 다시 검사 후 AI 진단 실행 | **API 키는 서버에만** (브라우저에 두면 노출). 주소가 공개라 화면을 거치지 않은 요청도 막음 | `api/diagnose.py` |
 | ③ | 손님 말투 질문 10개 (지역 일반 2·메뉴 3·상황 3·조건 2). 상호 미포함·지역 포함 등은 **코드가 검사**, 어기면 다시 생성(최대 2번) | 손님은 가게 이름을 모르고 "망원동 돈까스 맛집"처럼 물음 | `ai/question_generator.py` |
 | ④ | 질문마다 3번, 웹 검색 켜고 질의 | AI 답은 매번 달라 평균 / 동네 가게는 검색 없이는 모름 / 300초 제한 때문에 동시에 | `ai/diagnosis.py` `run_queries()` |
@@ -117,7 +117,7 @@ sequenceDiagram
 | `region` | 문자열 | 필수, "동"까지 (읍·면은 받지 않음) |
 | `menus` | 문자열 목록 | 필수, 1~3개 |
 | `station` | 문자열 | 선택. **10/31부터 화면에서 보내지 않음** (빈칸이면 질문 10개 모두 동 이름) |
-| `email`, `consent` | 문자열, true/false | 선택. **`consent`가 정확히 true이고 형식이 맞을 때만** Make로 넘김. AI에는 넘기지 않음 |
+| `email`, `consent` | 문자열, true/false | 선택. **10/31부터 화면에서 보내지 않음** (이메일은 `/api/feedback`에서). 보내면 `consent`가 정확히 true이고 형식이 맞을 때만 Make로 넘김. AI에는 넘기지 않음 |
 
 예: `{"store": "초록별돈까스 망원점", "region": "서울 마포구 망원동", "menus": ["등심돈까스"], "email": "", "consent": false}`
 
@@ -144,7 +144,7 @@ sequenceDiagram
 
 **`POST /api/places`** (가게 검색): `{"query": "명동교자 명동"}` → `{"ok", "error", "places": [{"name", "category", "address"(지번), "road_address", "region", "region_note"}]}` 최대 5개. `region`은 지번 주소에서 시·구·동까지 잘라 만든 값, `""`이면 `region_note`(읍·면 미지원, 동을 못 찾음)를 보여 주고 직접 입력. 검색어 2~40자, 네이버 열쇠는 서버 환경 변수에만. 네이버 클라우드 NAVER API HUB 주소(`naverapihub.apigw.ntruss.com/search/v1/local`)와 헤더(`X-NCP-APIGW-API-KEY-ID`·`X-NCP-APIGW-API-KEY`) 사용, 하루 한도 25,000회
 
-**`POST /api/feedback`** (사장님 의견 팝업 "의견을 들려주시면 리포트를 메일로 발송해드립니다"): `{"clarity": 1~5, "accuracy", "competitors", "useful", "comment"(300자), "name", "email", "consent": true, "report": 리포트 전체}` → `{"ok", "feedback_saved", "mail_sent", "error"}`. 서버가 ① 의견만 `FEEDBACK_WEBHOOK_URL`(피드백 시트, 이름·이메일 없음)로, ② 리포트를 Make로 보내(`event: "feedback_report"`, `name` 칸 포함) 연락처 시트 기록 + 리포트 메일 발송. 이메일은 동의가 true일 때만
+**`POST /api/feedback`** (사장님 의견 팝업 "의견을 들려주시면 리포트를 메일로 발송해드립니다"): `{"clarity": 1~5, "accuracy", "competitors", "useful", "comment"(300자), "name", "email", "consent": true, "report": 리포트 전체}` → `{"ok", "feedback_saved", "mail_sent", "error"}`. 서버가 ① 의견만 `FEEDBACK_WEBHOOK_URL`(피드백 시트, 이름·이메일 없음)로, ② 리포트를 Make로 보내(`event: "feedback_report"`, `name` 칸 포함) 연락처 시트 기록 + 리포트 메일 발송. 이메일은 동의가 true일 때만. 피드백 시트 기록은 구글 Apps Script 웹 앱([`automation/feedback_sheet.gs`](../automation/feedback_sheet.gs))
 
 **서버 → Make 웹훅 (한 줄짜리 칸 20개)**
 

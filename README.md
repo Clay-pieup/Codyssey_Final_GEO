@@ -40,7 +40,7 @@
 | 필수 기술 요소 (G3) | 이 서비스에서 | 코드 위치 |
 | --- | --- | --- |
 | AI Agent | 질문 도구 3개(직접 지명형·경쟁 비교형·상황 세분형)를 함수로 주고, Gemini가 진단 결과를 보고 호출할 도구를 스스로 선택 | `ai/agent.py`, `ai/gemini_client.py` `choose_tools()` |
-| 자동화 워크플로우 | 진단 완료 이벤트 → Make 웹훅 → 구글 시트 기록 + Gmail 발송 (사람 개입 없음) | `server/make_sender.py`, [`automation/make_scenario.json`](automation/make_scenario.json) |
+| 자동화 워크플로우 | 진단 완료 이벤트 → Make 웹훅 → 구글 시트 기록 / 의견 팝업 제출 → Make → 연락처 시트 + Gmail 리포트 발송, 의견은 Apps Script로 피드백 시트 (사람 개입 없음) | `server/make_sender.py`, [`automation/make_scenario.json`](automation/make_scenario.json) |
 
 ## 4. 문서
 
@@ -85,7 +85,7 @@ vercel.json     배포 설정 (화면 빌드 + Python 함수 최대 300초)
 | `GEMINI_CONCURRENCY` | `10` | 동시 호출 수 |
 | `MAKE_WEBHOOK_URL` | (비밀) | Make 웹훅 주소. 없으면 메일·시트 기록만 건너뜀 |
 | `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET` | (비밀) | 네이버 지역 검색(가게 검색). 없으면 검색만 "직접 입력해 주세요"로 안내 |
-| `FEEDBACK_WEBHOOK_URL` | (비밀) | 사장님 의견 팝업을 저장할 주소(Make 웹훅 또는 구글 Apps Script). 없으면 "의견 저장이 아직 준비되지 않았어요" 안내 |
+| `FEEDBACK_WEBHOOK_URL` | (비밀) | 사장님 의견을 피드백 시트에 기록하는 구글 Apps Script 웹 앱 주소 ([`automation/feedback_sheet.gs`](automation/feedback_sheet.gs)). 없으면 "의견 저장이 아직 준비되지 않았어요" 안내 |
 
 - 로컬: `.env.example`을 복사해 `.env`를 만들고 값 입력 (`.env`는 `.gitignore`로 막혀 있음)
 - 배포: Vercel 프로젝트 → Settings → Environment Variables
