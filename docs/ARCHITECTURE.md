@@ -113,10 +113,10 @@ sequenceDiagram
 | `store` | 문자열 | 필수, 1~30자 |
 | `region` | 문자열 | 필수, "동"까지 (읍·면은 받지 않음) |
 | `menus` | 문자열 목록 | 필수, 1~3개 |
-| `station` | 문자열 | 선택 |
+| `station` | 문자열 | 선택. **10/31부터 화면에서 보내지 않음** (빈칸이면 질문 10개 모두 동 이름) |
 | `email`, `consent` | 문자열, true/false | 선택. **`consent`가 정확히 true이고 형식이 맞을 때만** Make로 넘김. AI에는 넘기지 않음 |
 
-예: `{"store": "초록별돈까스 망원점", "region": "서울 마포구 망원동", "menus": ["등심돈까스"], "station": "", "email": "", "consent": false}`
+예: `{"store": "초록별돈까스 망원점", "region": "서울 마포구 망원동", "menus": ["등심돈까스"], "email": "", "consent": false}`
 
 **응답 = 리포트** (화면이 쓰는 칸)
 
