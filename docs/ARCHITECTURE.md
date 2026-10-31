@@ -141,7 +141,7 @@ sequenceDiagram
 
 **`POST /api/more`**: `{"report": 1차 리포트, "email", "consent"}` → `agent`·`suggestions`가 새로 채워진 리포트 + `more_error`(실패 시 안내 한 줄). 이미 추가 진단한 리포트면 실행하지 않음
 
-**`POST /api/places`** (가게 검색): `{"query": "명동교자 명동"}` → `{"ok", "error", "places": [{"name", "category", "address"(지번), "road_address", "region", "region_note"}]}` 최대 5개. `region`은 지번 주소에서 시·구·동까지 잘라 만든 값, `""`이면 `region_note`(읍·면 미지원, 동을 못 찾음)를 보여 주고 직접 입력. 검색어 2~40자, 네이버 열쇠는 서버 환경 변수에만
+**`POST /api/places`** (가게 검색): `{"query": "명동교자 명동"}` → `{"ok", "error", "places": [{"name", "category", "address"(지번), "road_address", "region", "region_note"}]}` 최대 5개. `region`은 지번 주소에서 시·구·동까지 잘라 만든 값, `""`이면 `region_note`(읍·면 미지원, 동을 못 찾음)를 보여 주고 직접 입력. 검색어 2~40자, 네이버 열쇠는 서버 환경 변수에만. 네이버 클라우드 NAVER API HUB 주소(`naverapihub.apigw.ntruss.com/search/v1/local`)와 헤더(`X-NCP-APIGW-API-KEY-ID`·`X-NCP-APIGW-API-KEY`) 사용, 하루 한도 25,000회
 
 **서버 → Make 웹훅 (한 줄짜리 칸 19개)**
 

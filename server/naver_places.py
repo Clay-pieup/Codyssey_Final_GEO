@@ -14,7 +14,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-SEARCH_URL = "https://openapi.naver.com/v1/search/local.json"
+# 2026년부터 네이버 검색 API는 네이버 클라우드 "NAVER API HUB"로 옮겨감 → 주소·헤더 이름이 예전 개발자센터와 다름
+SEARCH_URL = "https://naverapihub.apigw.ntruss.com/search/v1/local"
 TIMEOUT_SEC = 5      # 검색은 짧게 기다리고, 실패하면 직접 입력으로 안내
 MAX_RESULTS = 5      # 네이버 지역 검색이 한 번에 주는 최대 개수
 TAG_PATTERN = re.compile(r"<[^>]+>")  # 검색어 강조용 <b> 태그 제거
@@ -61,10 +62,10 @@ def search_places(query: str) -> dict:
     if not client_id or not client_secret:
         return {"ok": False, "error": "가게 검색이 아직 준비되지 않았어요. 직접 입력해 주세요.", "places": []}
 
-    url = SEARCH_URL + "?" + urllib.parse.urlencode({"query": query, "display": MAX_RESULTS, "sort": "random"})
+    url = SEARCH_URL + "?" + urllib.parse.urlencode({"query": query, "display": MAX_RESULTS, "sort": "random", "format": "json"})
     request = urllib.request.Request(url, headers={
-        "X-Naver-Client-Id": client_id,
-        "X-Naver-Client-Secret": client_secret,
+        "X-NCP-APIGW-API-KEY-ID": client_id,      # API HUB 애플리케이션의 Client ID
+        "X-NCP-APIGW-API-KEY": client_secret,     # 같은 애플리케이션의 Client Secret
     })
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT_SEC) as response:
