@@ -12,7 +12,6 @@ function App() {
     storeName: "",
 region: "",
 menu: "",
-station: "",
 email: "",
 consent: false
   });
@@ -69,7 +68,6 @@ consent: false
           store: form.storeName.trim(),
           region: form.region.trim(),
           menus,
-          station: form.station.trim(),
           email: form.email.trim(),
           consent: form.consent,
         }),
@@ -233,20 +231,6 @@ consent: false
                 <label htmlFor="menu">대표 메뉴 <span>*</span></label>
                 <div className="input-wrap"><Utensils size={18} /><input id="menu" value={form.menu} onChange={(e) => update("menu", e.target.value)} placeholder="예: 돈가스, 냉모밀, 카레" maxLength={150} /></div>
                 <p className="field-help">메뉴는 쉼표로 구분해 여러 개 입력할 수 있습니다.</p>
-                <label htmlFor="station">가까운 역 (선택)</label>
-                <div className="input-wrap">
-                  <MapPin size={18} />
-                  <input
-                    id="station"
-                    value={form.station}
-                    onChange={(e) => update("station", e.target.value)}
-                    placeholder="예: 서울역 (없으면 비워두세요)"
-                    maxLength={20}
-                  />
-               </div>
-               <p className="field-help">
-                  가까운 역이 있는 경우에만 입력해 주세요.
-               </p>
 
                 <div className="form-divider" />
                 <label htmlFor="email">결과 받을 이메일 (선택)</label>
