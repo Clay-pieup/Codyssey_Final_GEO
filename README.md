@@ -84,6 +84,7 @@ vercel.json     배포 설정 (화면 빌드 + Python 함수 최대 300초)
 | `GEMINI_REPEAT` | `3` | 질문마다 반복 횟수 |
 | `GEMINI_CONCURRENCY` | `10` | 동시 호출 수 |
 | `MAKE_WEBHOOK_URL` | (비밀) | Make 웹훅 주소. 없으면 메일·시트 기록만 건너뜀 |
+| `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET` | (비밀) | 네이버 지역 검색(가게 검색). 없으면 검색만 "직접 입력해 주세요"로 안내 |
 
 - 로컬: `.env.example`을 복사해 `.env`를 만들고 값 입력 (`.env`는 `.gitignore`로 막혀 있음)
 - 배포: Vercel 프로젝트 → Settings → Environment Variables

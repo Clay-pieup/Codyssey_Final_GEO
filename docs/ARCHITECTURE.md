@@ -14,6 +14,8 @@ flowchart LR
     S -->|run_diagnosis / run_more| A[AI 진단<br/>ai/]
     A -->|질문 생성·질의·분석<br/>함수 호출| G[Gemini API<br/>웹 검색]
     S -->|리포트| F
+    F -->|POST /api/places| S
+    S -->|가게 이름 검색| N[네이버<br/>지역 검색]
     S -->|웹훅: 진단 완료| M[Make]
     M --> SH[구글 시트<br/>진단결과 · 연락처]
     M --> GM[Gmail<br/>결과 메일]
@@ -22,7 +24,7 @@ flowchart LR
 | 구성 요소 | 위치 | 역할 | 담당 |
 | --- | --- | --- | --- |
 | 화면 | `geo_frontend/src/main.jsx` | 입력·동의, 결과·추가 진단 표시, 버튼 | 화면·배포 |
-| 서버 | `api/diagnose.py`, `api/more.py`, `server/` | 요청 확인 → AI 진단 실행 → Make 전달 → 응답 | 팀장 |
+| 서버 | `api/diagnose.py`, `api/more.py`, `api/places.py`, `server/` | 요청 확인 → AI 진단 실행 → Make 전달 → 응답 / 가게 검색은 네이버에 대신 물어봄 | 팀장 |
 | AI 진단 | `ai/` (Gemini 호출은 `ai/gemini_client.py` 한 곳), 프롬프트 `ai/prompts/` | 질문 생성 → 질의 → 분석 → Agent → 개선 제안 | AI |
 | 자동화 | Make 시나리오 ([`automation/make_scenario.json`](../automation/make_scenario.json)) | 시트 기록, 메일 발송 | 화면·배포 |
 | 배포 | Vercel (`vercel.json`) | 화면과 서버를 한 주소로. main에 합치면 자동 배포 | 팀장 |
@@ -139,6 +141,8 @@ sequenceDiagram
 
 **`POST /api/more`**: `{"report": 1차 리포트, "email", "consent"}` → `agent`·`suggestions`가 새로 채워진 리포트 + `more_error`(실패 시 안내 한 줄). 이미 추가 진단한 리포트면 실행하지 않음
 
+**`POST /api/places`** (가게 검색): `{"query": "명동교자 명동"}` → `{"ok", "error", "places": [{"name", "category", "address"(지번), "road_address", "region", "region_note"}]}` 최대 5개. `region`은 지번 주소에서 시·구·동까지 잘라 만든 값, `""`이면 `region_note`(읍·면 미지원, 동을 못 찾음)를 보여 주고 직접 입력. 검색어 2~40자, 네이버 열쇠는 서버 환경 변수에만
+
 **서버 → Make 웹훅 (한 줄짜리 칸 19개)**
 
 | 칸 | 진단결과 시트 | 연락처 시트 | 메일 |
@@ -159,6 +163,7 @@ sequenceDiagram
 | Agent: 질문 도구 3개를 함수로, Gemini가 선택 | 규칙으로 도구 선택 / 질문 문장만 AI에게 받기 / 여러 단계 반복 | 앞의 둘은 G3 불인정, 반복은 시간·비용 예측 불가. 실제 가게에서 "알지만 추천 안 함"을 구분함(10/26: 기본 0/30 → 직접 지명형 3/3) |
 | Agent 실행 여부는 규칙(언급률 30%) | AI가 실행 여부까지 판단 | 같은 입력이면 같은 판단 → G4 "3회 중 2회" 보장 (테스트 상호 3회 모두 같은 판단) |
 | 질문은 4유형 고정 + AI 문장 + 코드 검사 | 사장님 직접 입력 / 고정 템플릿 / AI 자유 생성 | 입력 부담 없이 자연스럽고 규칙도 지킴. 3번 시도로 바꾼 뒤 진단 12회 모두 질문 생성 성공 |
+| 가게 검색: 네이버 지역 검색을 서버가 대신 호출 | 카카오 우편번호(주소만, 가게 이름 검색 불가) / 카카오 로컬(무료 사용량이 계정당 첫 앱에만) / 화면에서 바로 호출(열쇠 노출) | 가게 이름으로 찾고, 열쇠는 서버에만. 결과 최대 5개라 "이름 + 동네"로 안내 (10/31) |
 | Vercel Python 함수, Python 기본 도구만 | Supabase(AI 코드 재작성) / FastAPI·Flask(새 라이브러리) | 화면과 한 주소, 새 라이브러리 0개 → 코드 전부를 설명 가능 |
 | 요청 1번으로 끝까지 기다림 | 단계별 요청 / 접수 후 확인 | 가장 단순. 결과 저장소가 필요 없음 |
 | 서버는 결과를 기억하지 않음 → 버튼은 화면이 리포트를 다시 보냄 | 서버에 저장 | Vercel은 요청마다 새로 시작, 저장소 추가 없이 해결 |
