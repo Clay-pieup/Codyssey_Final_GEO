@@ -2,10 +2,36 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   ArrowRight, BarChart3, Bot, CheckCircle2, ChevronRight, CircleHelp,
-  ClipboardCheck, Compass, Mail, MapPin, Search, ShieldCheck, Store,
+  ChevronDown, ClipboardCheck, Compass, Mail, MapPin, Search, ShieldCheck, Store,
   Utensils, WandSparkles
 } from "lucide-react";
 import "./styles.css";
+
+// ---------- 결과 리포트 계산 (화면 담당과 현장 논의, 10/31) ----------
+
+// 출처 사이트 이름: 주소는 Google 중간 주소일 수 있어 서버가 준 사이트 이름(source_sites)을 먼저 씀
+function siteNames(answer) {
+  const names = (answer.sources || []).map((url, i) => {
+    const site = (answer.source_sites || [])[i];
+    if (site) return site.replace(/^www\./, "");
+    try {
+      const host = new URL(url).hostname;
+      return host.includes("google") ? "" : host.replace(/^www\./, "");
+    } catch {
+      return "";
+    }
+  });
+  return [...new Set(names.filter(Boolean))];
+}
+
+// 질문 10개마다 답변 3개를 묶어 "정상 답변 중 몇 번 언급"을 센다 (서버가 Make에 보내는 질문별 결과와 같은 방식)
+function questionRows(report) {
+  return (report.questions || []).map((q) => {
+    const answers = (report.answers || []).filter((a) => a.question_id === q.id);
+    const valid = answers.filter((a) => a.status === "ok");
+    return { ...q, answers, valid: valid.length, hit: valid.filter((a) => a.mentioned).length };
+  });
+}
 
 function App() {
   const [form, setForm] = useState({
@@ -22,6 +48,8 @@ consent: false
   const [moreError, setMoreError] = useState("");
   const [isRunningMore, setIsRunningMore] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [openQuestion, setOpenQuestion] = useState(null); // 결과에서 펼친 질문 (답변 원문 보기)
+  const [diagnosedAt, setDiagnosedAt] = useState(null);   // 결과를 받은 시각 (리포트 "점검 시각")
 
   const update = (key, value) => {
     setForm((old) => ({ ...old, [key]: value }));
@@ -129,6 +157,8 @@ consent: false
       }
 
       setDiagnosisResult(report);
+      setDiagnosedAt(new Date());
+      setOpenQuestion(null);
       setShowResult(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error) {
@@ -185,6 +215,15 @@ consent: false
     setIsRunningMore(false);
   }
 };
+
+  // 결과 리포트에 쓰는 값 (결과 화면은 진단이 성공했을 때만 보임)
+  const report = diagnosisResult || {};
+  const summary = report.summary || {};
+  const mention = summary.mention || {};
+  const answers = report.answers || [];
+  const settings = report.settings || {};
+  const delivery = report.delivery || {};
+  const rows = questionRows(report);
 
   return (
     <div className="app-shell">
@@ -355,227 +394,201 @@ consent: false
       ) : (
         <main className="result-page">
           <div className="result-topline">
-  <span className="result-pill">
-    <WandSparkles size={14} />
-    {diagnosisResult?.ok ? "AI DIAGNOSIS RESULT" : "DEMO PREVIEW"}
-  </span>
-  <span>
-    {diagnosisResult?.ok
-      ? "AI가 생성한 분석 결과입니다."
-      : "실제 AI 분석 결과가 아닙니다"}
-  </span>
-</div>
+            <span className="result-pill"><WandSparkles size={14} /> AI 점검 리포트</span>
+            <span>AI가 생성한 추정치입니다</span>
+          </div>
           <div className="result-header">
             <div className="result-symbol"><BarChart3 size={28} /></div>
-            <h1>
-  {form.storeName}{" "}
-  <span>{diagnosisResult?.ok ? "AI 진단 결과" : "진단 미리보기"}</span>
-</h1>
+            <h1>{report.input?.store || form.storeName} <span>AI 점검 리포트</span></h1>
           </div>
-          {!diagnosisResult?.ok && (
-  <div className="demo-alert">
-    <CircleHelp size={20} />
-    <div>
-      <strong>시제품용 예시 화면입니다.</strong>
-      <p>
-        아래 수치와 경쟁 매장 정보는 예시이며,
-        실제 AI에 질의하거나 결과를 저장·발송하지 않았습니다.
-      </p>
-    </div>
-    </div>
-)}
-<div className="result-cards">
-          <div className="metric-card">
-  <span>{diagnosisResult?.ok ? "AI 매장 언급률" : "예시 언급률"}</span>
-  <strong>
-    {diagnosisResult?.ok
-      ? `${diagnosisResult.summary?.mention?.rate ?? "—"}`
-      : "60"}
-    <span>%</span>
-  </strong>
-  <small>
-    {diagnosisResult?.ok ? "AI 진단 결과" : "샘플 데이터 · 실제 측정 아님"}
-  </small>
-</div>  
-            <div className="metric-card">
-  <span>{diagnosisResult?.ok ? "AI 진단 질문 수" : "예시 질문 수"}</span>
-  <strong>
-    {diagnosisResult?.ok
-      ? diagnosisResult.questions?.length ?? 0
-      : 10}
-    <span>개</span>
-  </strong>
-  <small>
-    {diagnosisResult?.ok ? "실제 생성된 질문 기준" : "실제 질문 생성 전"}
-  </small>
-</div>
-            <div className="metric-card">
-  <span>분석 상태</span>
-  <strong className={diagnosisResult?.ok ? "" : "pending"}>
-    {diagnosisResult?.ok ? "진단 완료" : "연결 대기"}
-  </strong>
-  <small>
-    {diagnosisResult?.ok
-      ? "AI 진단 결과 수신 완료"
-      : "Gemini API 연결 필요"}
-  </small>
-</div>
-          </div>
-          {diagnosisResult?.ok && diagnosisResult.summary?.by_type && (
-  <section className="result-section">
-    <div className="result-section-title">
-      <h2>질문 유형별 AI 언급 결과</h2>
-    </div>
 
-    {Object.entries(diagnosisResult.summary.by_type).map(
-      ([type, result]) => (
-        <div className="recommendation" key={type}>
-          <div>
-            <strong>{type}</strong>
-            <p>
-              정상 답변 {result.valid ?? 0}개 중
-              {" "}{result.mentioned ?? 0}개 언급
-              {" "}(
-              {result.rate == null ? "측정 불가" : `${result.rate}%`}
-              )
-            </p>
-          </div>
-        </div>
-      )
-    )}
-   </section>
-)} 
-
-  {diagnosisResult?.ok && (
-  <section className="result-section">
-    <div className="result-section-title">
-      <h2>AI 답변에 함께 등장한 가게</h2>
-    </div>
-
-    {(diagnosisResult.summary?.competitors ?? []).length > 0 ? (
-      diagnosisResult.summary.competitors.slice(0, 3).map((competitor, index) => (
-        <div className="recommendation" key={index}>
-          <span className="recommend-number">
-            {String(index + 1).padStart(2, "0")}
-          </span>
-          <div>
-            <strong>{competitor.name}</strong>
-            <p>{competitor.description || "소개 문장 없음"}</p>
-            <small>함께 등장한 답변: {competitor.answers ?? 0}개</small>
-          </div>
-        </div>
-      ))
-    ) : (
-      <p>함께 언급된 다른 가게가 없습니다.</p>
-    )}
-  </section>
-)}
-{diagnosisResult?.ok && diagnosisResult.agent?.ran && (
-  <section className="result-section">
-    <div className="result-section-title">
-      <h2>AI 추가 진단 결과</h2>
-    </div>
-
-    {diagnosisResult.agent.reason_to_run && (
-      <p>{diagnosisResult.agent.reason_to_run}</p>
-    )}
-
-    {(diagnosisResult.agent.trace ?? []).map((item, index) => (
-      <div className="recommendation" key={index}>
-        <span className="recommend-number">
-          {String(index + 1).padStart(2, "0")}
-        </span>
-        <div>
-          <strong>{item.tool_label || "추가 진단"}</strong>
-          {item.question && <p>추가 질문: "{item.question}"</p>}
-          <p>선택 이유: {item.why || "별도 설명 없음"}</p>
-          <small>
-            언급 결과: {item.result?.mentioned ?? 0}개 /
-            정상 답변 {item.result?.valid ?? 0}개
-          </small>
-        </div>
-      </div>
-    ))}
-  </section>
-)}
-
-<section className="result-section">
-            <div className="result-section-title">
-  <h2>
-    {diagnosisResult?.ok ? "AI 맞춤 개선 제안" : "개선 제안 예시"}
-  </h2>
-  <span>{diagnosisResult?.ok ? "AI 분석 결과" : "샘플 콘텐츠"}</span>
-</div>
-            {diagnosisResult?.ok ? (
-  (diagnosisResult.suggestions ?? []).slice(0, 3).map((suggestion, index) => (
-    <div className="recommendation" key={index}>
-      <span className="recommend-number">
-        {String(index + 1).padStart(2, "0")}
-      </span>
-      <div>
-        <strong>{suggestion.title}</strong>
-        <p>{suggestion.detail}</p>
-        {suggestion.evidence && (
-          <small>분석 근거: {suggestion.evidence}</small>
-        )}
-      </div>
-      <ChevronRight size={19} />
-    </div>
-  ))
-) : (
-  <p>AI 진단을 실행하면 맞춤 개선 제안이 표시됩니다.</p>
-)}
+          {/* 1. 어떻게 점검했나: 입력 요약 + 어떤 AI로 물어봤는지 */}
+          <section className="result-section">
+            <div className="result-section-title"><h2>어떻게 점검했나요</h2></div>
+            <dl className="summary-grid">
+              <div><dt>지역</dt><dd>{report.input?.region}</dd></div>
+              <div><dt>대표 메뉴</dt><dd>{(report.input?.menus || []).join(", ")}</dd></div>
+              <div><dt>물어본 AI</dt><dd>Google Gemini ({report.model}){settings.use_search ? " · 웹 검색 사용" : ""}</dd></div>
+              <div><dt>질문 방식</dt><dd>손님 말투 질문 {rows.length}개 × {settings.repeat || 3}번 = 답변 {answers.length}개</dd></div>
+              {diagnosedAt && <div><dt>점검 시각</dt><dd>{diagnosedAt.toLocaleString("ko-KR", { dateStyle: "medium", timeStyle: "short" })}</dd></div>}
+            </dl>
           </section>
 
-        {diagnosisResult?.ok && diagnosisResult.notice && (
-  <section className="result-section">
-    <div className="result-section-title">
-      <h2>진단 결과 안내</h2>
-    </div>
-    <p>{diagnosisResult.notice}</p>
-  </section>
-)}  
+          {/* 2. 핵심 숫자 */}
+          <div className="result-cards">
+            <div className="metric-card">
+              <span>AI 답변 속 우리 가게 언급률</span>
+              <strong>{mention.rate ?? "—"}<span>%</span></strong>
+              <small>정상 답변 {mention.valid ?? 0}개 중 {mention.mentioned ?? 0}개에서 언급</small>
+            </div>
+            <div className="metric-card">
+              <span>언급될 때 평균 순위</span>
+              <strong>{summary.rank?.average ?? "—"}<span>{summary.rank?.average != null ? "위" : ""}</span></strong>
+              <small>{summary.rank?.counted ? `여러 가게를 나열한 답변 ${summary.rank.counted}개 기준, 1위 ${summary.rank.first_place}번` : "여러 가게를 나열한 답변에서 순위를 셀 수 없음"}</small>
+            </div>
+            <div className="metric-card">
+              <span>받은 AI 답변</span>
+              <strong>{mention.valid ?? 0}<span>개</span></strong>
+              <small>전체 {answers.length}개 중 정상 답변 (실패·빈 답변은 언급률에서 제외)</small>
+            </div>
+          </div>
+          {summary.low_reliability && (
+            <div className="demo-alert" role="note">
+              <CircleHelp size={20} />
+              <div><strong>신뢰도 낮음</strong><p>정상적으로 받은 AI 답변이 충분하지 않아 결과가 실제와 다를 수 있어요. 참고 자료로만 봐 주세요.</p></div>
+            </div>
+          )}
 
-{diagnosisResult?.ok && diagnosisResult.summary?.low_reliability && (
-  <section className="result-section">
-    <div className="result-section-title">
-      <h2>분석 신뢰도 안내</h2>
-    </div>
-    <p>
-      정상적으로 수집된 AI 답변이 충분하지 않아
-      진단 결과의 신뢰도가 낮을 수 있습니다.
-      결과를 참고 자료로 활용해 주세요.
-    </p>
-  </section>
-)}
+          {/* 3. 질문 유형별 */}
+          <section className="result-section">
+            <div className="result-section-title"><h2>질문 유형별 결과</h2><span>손님이 어떻게 물을 때 나오나요</span></div>
+            {Object.entries(summary.by_type || {}).map(([type, v]) => (
+              <div className="type-row" key={type}>
+                <strong>{type}</strong>
+                <div className="type-bar"><div style={{ width: `${v.rate ?? 0}%` }} /></div>
+                <span>{v.valid ? `${v.valid}개 중 ${v.mentioned ?? 0}개` : "측정 불가"}</span>
+              </div>
+            ))}
+          </section>
+
+          {/* 4. 질문별 결과 + AI 답변 원문 */}
+          <section className="result-section">
+            <div className="result-section-title"><h2>AI에게 물어본 질문 {rows.length}개</h2><span>질문을 누르면 AI 답변 원문</span></div>
+            <ol className="question-list">
+              {rows.map((q) => (
+                <li key={q.id}>
+                  <button type="button" className="question-row" aria-expanded={openQuestion === q.id} onClick={() => setOpenQuestion(openQuestion === q.id ? null : q.id)}>
+                    <span className="question-type">{q.type}</span>
+                    <span className="question-text">{q.text}</span>
+                    <span className={q.hit > 0 ? "hit-badge yes" : "hit-badge"}>{q.valid ? `${q.valid}번 중 ${q.hit}번 언급` : "답변 없음"}</span>
+                    <ChevronDown size={16} className={openQuestion === q.id ? "chevron open" : "chevron"} />
+                  </button>
+                  {openQuestion === q.id && (
+                    <div className="answer-list">
+                      {q.answers.map((a) => (
+                        <div className="answer-item" key={a.run}>
+                          <div className="answer-head">
+                            <strong>{a.run}번째 답변</strong>
+                            <span className={a.status === "ok" && a.mentioned ? "yes" : ""}>
+                              {a.status !== "ok" ? "답변 실패 (언급률 계산에서 제외)" : a.mentioned ? `우리 가게 언급${a.rank ? ` · ${a.rank}위` : ""}` : "언급 없음"}
+                            </span>
+                          </div>
+                          {a.text && <p className="answer-text">{a.text.replace(/\*\*/g, "")}</p>}
+                          {siteNames(a).length > 0 && <p className="answer-sources">출처: {siteNames(a).slice(0, 5).join(", ")}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </section>
+
+          {/* 5. AI가 우리 가게를 소개한 말 (사장님 설문 "소개한 말이 실제와 맞았나요?"와 연결) */}
+          <section className="result-section">
+            <div className="result-section-title"><h2>AI가 우리 가게를 소개한 말</h2></div>
+            {(summary.descriptions || []).length > 0 ? (
+              <ul className="quote-list">
+                {summary.descriptions.map((d, i) => (
+                  <li key={i}>“{d.text}” <small>{d.count}번</small></li>
+                ))}
+              </ul>
+            ) : (
+              <p className="muted">AI 답변에서 우리 가게를 소개한 말이 없어요{mention.mentioned ? "" : " (우리 가게가 언급된 답변이 없음)"}.</p>
+            )}
+          </section>
+
+          {/* 6. 함께 나온 가게 */}
+          <section className="result-section">
+            <div className="result-section-title"><h2>AI 답변에 함께 나온 가게</h2></div>
+            {(summary.competitors || []).length > 0 ? (
+              summary.competitors.slice(0, 3).map((c, index) => (
+                <div className="recommendation" key={index}>
+                  <span className="recommend-number">{String(index + 1).padStart(2, "0")}</span>
+                  <div>
+                    <strong>{c.name}</strong>
+                    <p>{c.description || "소개 문장 없음"}</p>
+                    <small>함께 나온 답변 {c.answers ?? 0}개</small>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="muted">함께 나온 다른 가게가 없어요.</p>
+            )}
+          </section>
+
+          {/* 7. AI 추가 진단 (Agent) */}
+          {report.agent?.ran && (
+            <section className="result-section">
+              <div className="result-section-title"><h2>AI 추가 진단</h2><span>{report.agent.trigger === "button" ? "더 자세히 진단하기" : "언급률이 낮아 자동 실행"}</span></div>
+              {report.agent.reason_to_run && <p className="muted">{report.agent.reason_to_run}</p>}
+              {(report.agent.trace || []).map((item, index) => (
+                <div className="recommendation" key={index}>
+                  <span className="recommend-number">{String(index + 1).padStart(2, "0")}</span>
+                  <div>
+                    <strong>{item.tool_label || "추가 진단"}</strong>
+                    {item.question && <p>추가 질문: "{item.question}"</p>}
+                    <p>AI가 이 질문을 고른 이유: {item.why || "별도 설명 없음"}</p>
+                    <small>결과: 정상 답변 {item.result?.valid ?? 0}개 중 {item.result?.mentioned ?? 0}개에서 언급</small>
+                  </div>
+                </div>
+              ))}
+            </section>
+          )}
+
+          {/* 8. 개선 제안 */}
+          <section className="result-section">
+            <div className="result-section-title"><h2>개선 제안</h2><span>근거는 위 진단 결과</span></div>
+            {(report.suggestions || []).length > 0 ? (
+              report.suggestions.slice(0, 3).map((sg, index) => (
+                <div className="recommendation" key={index}>
+                  <span className="recommend-number">{String(index + 1).padStart(2, "0")}</span>
+                  <div>
+                    <strong>{sg.title}</strong>
+                    <p>{sg.detail}</p>
+                    {sg.evidence && <small>근거: {sg.evidence}</small>}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="muted">개선 제안을 만들지 못했어요. 다시 진단해 주세요.</p>
+            )}
+          </section>
+
+          {/* 9. 결과 메일 + 안내 */}
+          <section className="result-section">
+            <div className="result-section-title"><h2>결과 메일과 안내</h2></div>
+            <p className="muted">
+              <Mail size={14} />{" "}
+              {!delivery.requested
+                ? "이메일을 입력하지 않아 결과 메일은 보내지 않았어요."
+                : delivery.sent
+                  ? "입력하신 이메일로 결과를 보냈어요. 몇 분 안에 도착해요."
+                  : "결과 메일을 보내지 못했어요. 이 화면을 저장해 두세요."}
+            </p>
+            {report.notice && <p className="muted">{report.notice}</p>}
+          </section>
+
           {moreError && (
-  <div className="demo-alert" role="alert">
-    <CircleHelp size={20} />
-    <p>{moreError}</p>
-  </div>
-)}
+            <div className="demo-alert" role="alert">
+              <CircleHelp size={20} />
+              <p>{moreError}</p>
+            </div>
+          )}
 
-<div className="result-actions"></div>
-
-          <div className="result-actions"><button className="secondary-button" onClick={reset}>입력 화면으로 돌아가기</button>{diagnosisResult?.ok && diagnosisResult.more_available && (
-  <button
-    className="submit-button"
-    onClick={runMoreDiagnosis}
-    disabled={isRunningMore}
-  >
-    {isRunningMore ? "더 자세히 진단하는 중..." : "더 자세히 진단하기"}
-    <ArrowRight size={17} />
-  </button>
-)}
-</div>
+          <div className="result-actions">
+            <button className="secondary-button" onClick={reset}>입력 화면으로 돌아가기</button>
+            {report.more_available && (
+              <button className="submit-button" onClick={runMoreDiagnosis} disabled={isRunningMore}>
+                {isRunningMore ? "더 자세히 진단하는 중..." : "더 자세히 진단하기"}
+                <ArrowRight size={17} />
+              </button>
+            )}
+          </div>
           <footer>
-  <span>우리가게 AI 점검</span>
-  <span>
-    {diagnosisResult?.ok
-      ? "실제 AI 진단 결과"
-      : "예시 결과 · 실제 AI 분석 아님"}
-  </span>
-</footer>
+            <span>우리가게 AI 점검</span>
+            <span>AI가 생성한 추정치 · 실제 AI 앱 답변과 다를 수 있음</span>
+          </footer>
         </main>
       )}
     </div>
