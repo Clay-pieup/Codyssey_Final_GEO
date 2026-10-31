@@ -66,7 +66,6 @@ menu: ""
   const [isDiagnosing, setIsDiagnosing] = useState(false);
   const [moreError, setMoreError] = useState("");
   const [isRunningMore, setIsRunningMore] = useState(false);
-  const [showHelp, setShowHelp] = useState(false);
   const [openQuestion, setOpenQuestion] = useState(null); // 결과에서 펼친 질문 (답변 원문 보기)
   const [diagnosedAt, setDiagnosedAt] = useState(null);   // 결과를 받은 시각 (리포트 "점검 시각")
 
@@ -80,6 +79,8 @@ menu: ""
   const [placeMessage, setPlaceMessage] = useState(""); // 결과 없음·실패·지역 직접 입력 안내
   const [isSearching, setIsSearching] = useState(false);
   const [pickedPlace, setPickedPlace] = useState(null); // 고른 가게 (도로명 주소 확인용)
+  const [autoMenu, setAutoMenu] = useState("");         // 가게 검색으로 자동 채운 메뉴 (사장님이 고쳤는지 비교용)
+  const [menuNote, setMenuNote] = useState("");         // 대표 메뉴 칸 아래 안내
 
   const searchPlaces = async () => {
     const query = form.storeName.trim();
@@ -107,8 +108,21 @@ menu: ""
   };
 
   const pickPlace = (place) => {
+    // 대표 메뉴: 네이버 업종(예: 한식>칼국수,만두)에서 뽑은 후보로 채움.
+    // 사장님이 직접 쓴 메뉴는 덮어쓰지 않음 (비어 있거나, 앞서 자동으로 채운 그대로일 때만 바꿈)
+    const menuText = (place.menus || []).join(", ");
+    const canFillMenu = !form.menu.trim() || form.menu === autoMenu;
+    if (canFillMenu) {
+      setAutoMenu(menuText);
+      setMenuNote(menuText ? "가게 업종에서 가져온 메뉴예요. 실제 대표 메뉴와 다르면 고쳐 주세요." : "대표 메뉴는 직접 입력해 주세요.");
+    }
     // 지역을 못 찾은 가게(예: 충무로2가)는 지역 칸을 그대로 두고 직접 입력 안내
-    setForm((old) => ({ ...old, storeName: place.name, region: place.region || old.region }));
+    setForm((old) => ({
+      ...old,
+      storeName: place.name,
+      region: place.region || old.region,
+      menu: canFillMenu ? menuText : old.menu,
+    }));
     setPickedPlace(place);
     setPlaces([]);
     setPlaceMessage(place.region ? "" : place.region_note);
@@ -311,18 +325,9 @@ menu: ""
         </a>
         <div className="topbar-right">
           <span className="status-dot" /> 외식업 매장 AI 노출 진단
-          <button className="icon-button" aria-label="서비스 안내" onClick={() => setShowHelp(!showHelp)}>
-            <CircleHelp size={19} />
-          </button>
         </div>
       </header>
 
-      {showHelp && (
-        <div className="help-banner">
-          이 서비스는 대화형 AI 답변에서 우리 가게가 어떻게 언급되는지 점검하는 도구입니다.
-          현재 화면은 개발 중인 시제품입니다. <button onClick={() => setShowHelp(false)}>닫기</button>
-        </div>
-      )}
 
       {!showResult ? (
         <>
@@ -417,7 +422,8 @@ menu: ""
 
                 <label htmlFor="menu">대표 메뉴 <span>*</span></label>
                 <div className="input-wrap"><Utensils size={18} /><input id="menu" value={form.menu} onChange={(e) => update("menu", e.target.value)} placeholder="예: 돈가스, 냉모밀, 카레" maxLength={150} /></div>
-                <p className="field-help">메뉴는 쉼표로 구분해 여러 개 입력할 수 있습니다.</p>
+                <p className="field-help">메뉴는 쉼표로 구분해 1~3개 입력할 수 있습니다.</p>
+                {menuNote && <p className="field-help menu-note">{menuNote}</p>}
 
                 {error && <p className="error-message" role="alert">{error}</p>}
                 <button
@@ -443,7 +449,7 @@ menu: ""
               <div className="feature"><div className="feature-icon green"><ClipboardCheck size={21} /></div><div><strong>개선 방향 제안</strong><p>실행할 수 있는 다음 행동을 안내</p></div></div>
             </section>
           </main>
-          <footer><span>우리가게 AI 점검</span><span>GEO 진단 서비스 · 개발 중인 시제품</span><button onClick={() => setShowHelp(!showHelp)}>서비스 안내</button></footer>
+          <footer><span>우리가게 AI 점검</span><span>GEO 진단 서비스 · 개발 중인 시제품</span></footer>
         </>
       ) : (
         <main className="result-page">

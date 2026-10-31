@@ -23,9 +23,9 @@ button { cursor: pointer; }
 .brand-dot { color:#7866e8; }
 .topbar-right { display:flex; align-items:center; gap:9px; color:#747b91; font-size:12px; }
 .status-dot { width:7px; height:7px; border-radius:50%; background:#2cb58a; }
-.icon-button { display:grid; place-items:center; border:0; background:transparent; color:#858ba0; padding:8px; margin-left:10px; }
-.help-banner { max-width:1160px; margin:14px auto 0; padding:13px 16px; background:#efedff; color:#4c419f; border-radius:10px; font-size:13px; }
-.help-banner button { border:0; color:#4c419f; background:transparent; text-decoration:underline; margin-left:8px; }
+
+
+
 main { max-width:1160px; padding:0 28px; margin:0 auto; }
 .hero { min-height:340px; display:grid; grid-template-columns:1.15fr .85fr; align-items:center; padding:47px 30px 40px; overflow:hidden; }
 .eyebrow,.section-kicker { display:flex; align-items:center; gap:8px; font-size:11px; font-weight:800; letter-spacing:1.4px; color:#6c5ad9; }
@@ -155,3 +155,4 @@ footer { display:flex; justify-content:space-between; align-items:center; gap:12
 .feedback-contact label[for] { display:block; margin:12px 0 6px; font-size:11px; font-weight:700; color:#4a5068; }
 .feedback-contact label[for] span { color:#c53c54; }
 .feedback-contact .input-wrap { height:42px; }
+.menu-note { color:#6b5bd8; }

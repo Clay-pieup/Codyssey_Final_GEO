@@ -41,6 +41,26 @@ def region_from_address(address: str) -> tuple[str, str]:
     return "", "지역(동)을 찾지 못했어요. 직접 입력해 주세요"   # 종로2가처럼 이름에 '동'이 없는 곳
 
 
+# 업종 이름이라 메뉴로 쓰기 어려운 말 (예: "카페,디저트>카페"의 "카페")
+BROAD_WORDS = {"한식", "중식", "일식", "양식", "분식", "음식점", "한식당", "중식당", "일식당", "양식당",
+               "카페", "디저트", "술집", "요리주점", "아시아음식", "퓨전요리", "뷔페", "패밀리레스토랑"}
+
+
+def menus_from_category(category: str) -> list[str]:
+    """네이버 업종에서 대표 메뉴 후보를 뽑는다 (최대 3개). 사장님이 고칠 수 있는 '후보'일 뿐이다.
+
+    "한식>칼국수,만두" → ["칼국수", "만두"] / "일식>돈가스" → ["돈가스"] / "카페,디저트>카페" → []
+    """
+    if ">" not in (category or ""):
+        return []                                   # "한식"처럼 큰 분류만 있으면 메뉴를 알 수 없음
+    words = [w.strip() for w in category.split(">")[-1].split(",")]
+    menus = []
+    for word in words:
+        if word and word not in BROAD_WORDS and word not in menus:
+            menus.append(word)
+    return menus[:3]
+
+
 def to_place(item: dict) -> dict:
     """네이버 결과 1개를 화면에 필요한 칸만 남긴 모양으로 바꾼다."""
     address = clean_text(item.get("address", ""))
@@ -52,6 +72,7 @@ def to_place(item: dict) -> dict:
         "road_address": clean_text(item.get("roadAddress", "")), # 도로명 주소 (사장님 확인용)
         "region": region,                                        # 자동 입력할 지역 ("" 이면 직접 입력)
         "region_note": region_note,
+        "menus": menus_from_category(clean_text(item.get("category", ""))),  # 대표 메뉴 후보 (없으면 [])
     }
 
 
