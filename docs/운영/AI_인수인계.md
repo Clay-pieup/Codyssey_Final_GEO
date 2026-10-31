@@ -1,7 +1,7 @@
 # AI 진단 인수인계 메모
 
 > AI 담당 작성 · 처음 작성 2026-10-20 (10/22 통합일용) · **v2 2026-10-22: 배포 후 실제 값으로 갱신** · v2.1 10/23: 6장 확인 기록을 행마다 정확히 표기
-> AI 부분에서 막히면 이 문서부터 봐 주세요. 입출력 상세: [`AI_진단_입출력.md`](../기술/AI_진단_입출력.md) · 기능별 설명: [`AI_활용명세.md`](../기술/AI_활용명세.md) · 서버 쪽: [`서버_해설.md`](../기술/서버_해설.md), [`API_명세.md`](../기술/API_명세.md)
+> AI 부분에서 막히면 이 문서부터 봐 주세요. 입출력 상세: [ARCHITECTURE 5장(약속)](../ARCHITECTURE.md) · 기능별 설명: [ARCHITECTURE 4장(AI 설정)](../ARCHITECTURE.md) · 서버 쪽: [ARCHITECTURE 6장(결정과 근거)](../ARCHITECTURE.md), [ARCHITECTURE 5장(약속)](../ARCHITECTURE.md)
 
 ---
 
