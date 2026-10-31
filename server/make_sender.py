@@ -15,7 +15,7 @@ KST = timezone(timedelta(hours=9))  # 한국 시각
 TIMEOUT_SEC = 10  # Make가 응답하지 않을 때 오래 기다리지 않음
 
 
-def build_payload(report: dict, event: str, email: str) -> dict:
+def build_payload(report: dict, event: str, email: str, name: str = "") -> dict:
     """리포트(dict)에서 Make로 보낼 칸만 골라 한 줄짜리 값으로 만든다."""
     inp = report.get("input") or {}
     summary = report.get("summary") or {}
@@ -66,10 +66,11 @@ def build_payload(report: dict, event: str, email: str) -> dict:
         "model": report.get("model", ""),
         "email": email,              # 동의한 이메일만 (아니면 빈칸) → Make가 빈칸이면 메일·연락처 단계를 건너뜀
         "consent": bool(email),
+        "name": name if email else "",  # 의견 팝업에서 받은 이름 (동의한 경우만, 메일 인사말·연락처용)
     }
 
 
-def send_to_make(report: dict, event: str, email: str) -> dict:
+def send_to_make(report: dict, event: str, email: str, name: str = "") -> dict:
     """성공한 진단만 Make로 보낸다. 돌려주는 값은 화면 응답의 delivery 칸이 된다."""
     delivery = {"requested": bool(email), "sent": False, "error": ""}
     if not report.get("ok"):
@@ -81,7 +82,7 @@ def send_to_make(report: dict, event: str, email: str) -> dict:
         delivery["error"] = "MAKE_WEBHOOK_URL이 설정되지 않음"
         return delivery
 
-    body = json.dumps(build_payload(report, event, email), ensure_ascii=False).encode("utf-8")
+    body = json.dumps(build_payload(report, event, email, name), ensure_ascii=False).encode("utf-8")
     request = urllib.request.Request(
         url, data=body, method="POST", headers={"Content-Type": "application/json; charset=utf-8"}
     )

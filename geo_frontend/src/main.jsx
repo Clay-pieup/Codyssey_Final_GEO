@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import {
   ArrowRight, BarChart3, Bot, CheckCircle2, ChevronRight, CircleHelp,
   ChevronDown, ClipboardCheck, Compass, Mail, MapPin, Search, ShieldCheck, Store,
-  Utensils, WandSparkles, X
+  User, Utensils, WandSparkles, X
 } from "lucide-react";
 import "./styles.css";
 
@@ -26,8 +26,7 @@ function siteNames(answer) {
 
 // ---------- 사장님 의견 팝업 (피드백, 10/31 화면 담당과 현장 논의) ----------
 const FEEDBACK_ASKED_KEY = "feedback-asked-v1"; // 이 브라우저에서 팝업을 이미 띄웠는지 (다시 안 띄우려고)
-const EMPTY_FEEDBACK = { owner: "", category: "", clarity: 0, accuracy: "", useful: "", comment: "" };
-const FEEDBACK_CATEGORIES = ["한식", "중식", "일식", "양식", "분식", "카페", "주점", "기타"]; // 서버 보기와 같아야 함
+const EMPTY_FEEDBACK = { clarity: 0, accuracy: "", competitors: "", useful: "", comment: "", name: "", email: "", consent: false };
 
 // 보기 중 하나를 고르는 문항 (버튼 묶음)
 function Choice({ label, options, value, onPick, hint }) {
@@ -252,6 +251,7 @@ consent: false
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackState, setFeedbackState] = useState("idle"); // idle → sending → done
   const [feedbackError, setFeedbackError] = useState("");
+  const [feedbackResult, setFeedbackResult] = useState(null); // 서버 응답 (메일 발송 성공 여부)
   const reportEndRef = useRef(null);
 
   useEffect(() => {
@@ -262,7 +262,7 @@ consent: false
     // 화면에 리포트 끝이 보이는 순간을 알려 주는 브라우저 기능 (스크롤 위치를 계속 계산하지 않아도 됨)
     const observer = new IntersectionObserver((entries) => {
       if (entries.some((entry) => entry.isIntersecting)) {
-        setFeedbackOpen(true);
+        openFeedback();
         try { localStorage.setItem(FEEDBACK_ASKED_KEY, "1"); } catch { /* 저장이 막혀도 이번 한 번만 열림 */ }
         observer.disconnect();
       }
@@ -276,9 +276,27 @@ consent: false
     setFeedbackError("");
   };
 
+  // 팝업을 열 때 입력 화면에서 동의하고 넣은 이메일이 있으면 미리 채움
+  const openFeedback = () => {
+    setFeedback((old) => ({ ...old, email: old.email || (form.consent ? form.email.trim() : "") }));
+    setFeedbackOpen(true);
+  };
+
   const sendFeedback = async () => {
-    if (!feedback.owner || !feedback.clarity) {
-      setFeedbackError("*표시 문항(외식업 운영 여부, 이해하기 쉬웠는지)은 꼭 골라 주세요.");
+    if (!feedback.clarity || !feedback.accuracy || !feedback.competitors || !feedback.useful) {
+      setFeedbackError("1~4번 문항을 모두 골라 주세요.");
+      return;
+    }
+    if (!feedback.name.trim()) {
+      setFeedbackError("이름을 입력해 주세요.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(feedback.email.trim())) {
+      setFeedbackError("이메일 주소를 확인해 주세요.");
+      return;
+    }
+    if (!feedback.consent) {
+      setFeedbackError("리포트를 메일로 받으려면 개인정보 수집·이용에 동의해 주세요.");
       return;
     }
     setFeedbackState("sending");
@@ -287,11 +305,8 @@ consent: false
       const response = await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...feedback,
-          // 어떤 진단을 보고 남긴 의견인지 대조용 (이름·연락처는 보내지 않음)
-          context: { store: report.input?.store, region: report.input?.region, mention_rate: mention.rate, agent_ran: !!report.agent?.ran },
-        }),
+        // 서버는 진단을 기억하지 못해서 리포트를 통째로 다시 보냄 (리포트 메일 발송에 필요)
+        body: JSON.stringify({ ...feedback, email: feedback.email.trim(), name: feedback.name.trim(), report }),
       });
       const data = await response.json();
       if (!data.ok) {
@@ -299,6 +314,7 @@ consent: false
         setFeedbackState("idle");
         return;
       }
+      setFeedbackResult(data);
       setFeedbackState("done");
     } catch (e) {
       setFeedbackError("의견을 보내지 못했어요. 잠시 후 다시 보내 주세요.");
@@ -659,8 +675,8 @@ consent: false
 
           <div className="result-actions">
             <button className="secondary-button" onClick={reset}>입력 화면으로 돌아가기</button>
-            <button className="secondary-button" onClick={() => setFeedbackOpen(true)} disabled={feedbackState === "done"}>
-              {feedbackState === "done" ? "의견 고맙습니다" : "의견 남기기"}
+            <button className="secondary-button" onClick={openFeedback} disabled={feedbackState === "done"}>
+              {feedbackState === "done" ? "의견 고맙습니다" : "의견 남기고 리포트 받기"}
             </button>
             {report.more_available && (
               <button className="submit-button" onClick={runMoreDiagnosis} disabled={isRunningMore}>
@@ -677,29 +693,49 @@ consent: false
                   <div className="feedback-done">
                     <CheckCircle2 size={30} />
                     <h3>고맙습니다!</h3>
-                    <p>남겨 주신 의견은 서비스를 고치는 데 쓸게요.</p>
+                    <p>
+                      {feedbackResult?.mail_sent
+                        ? `리포트를 ${feedback.email.trim()}(으)로 보냈어요. 몇 분 안에 도착해요.`
+                        : "의견은 잘 받았어요. 다만 리포트 메일을 보내지 못했어요. 이 화면을 저장해 두세요."}
+                    </p>
                     <button className="submit-button" onClick={() => setFeedbackOpen(false)}>닫기</button>
                   </div>
                 ) : (
                   <>
-                    <h3 id="feedback-title">사장님 의견을 들려주세요 <small>1분</small></h3>
-                    <p className="feedback-note">이름·연락처는 받지 않아요. 남긴 의견은 서비스를 고치는 데만 써요.</p>
-                    <Choice label="외식업(음식점·카페 등)을 운영하고 계신가요? *" options={["예", "아니요"]} value={feedback.owner} onPick={(v) => pickFeedback("owner", v)} />
-                    {feedback.owner === "예" && (
-                      <Choice label="업종" options={FEEDBACK_CATEGORIES} value={feedback.category} onPick={(v) => pickFeedback("category", v)} />
-                    )}
-                    <Choice label="진단 결과를 이해하기 쉬웠나요? *" options={[1, 2, 3, 4, 5]} value={feedback.clarity} onPick={(v) => pickFeedback("clarity", v)} hint="1 어려웠어요 · 5 쉬웠어요" />
-                    <Choice label="AI가 우리 가게를 소개한 말이 실제와 맞았나요?" options={["맞음", "일부 맞음", "틀림", "소개 없음"]} value={feedback.accuracy} onPick={(v) => pickFeedback("accuracy", v)} />
-                    <Choice label="개선 제안 중 실제로 해 볼 만한 것이 있었나요?" options={["있음", "없음"]} value={feedback.useful} onPick={(v) => pickFeedback("useful", v)} />
+                    <h3 id="feedback-title">사장님 의견을 들려주시면 리포트를 메일로 발송해드립니다.</h3>
+                    <p className="feedback-note">리포트를 보신 그대로 답해 주세요. 5문항(1~4번 필수), 1분이면 끝나요.</p>
+                    <Choice label="1. 진단 결과(언급률·질문별 결과)를 이해하기 쉬웠나요?" options={[1, 2, 3, 4, 5]} value={feedback.clarity} onPick={(v) => pickFeedback("clarity", v)} hint="1 어려웠어요 · 5 쉬웠어요" />
+                    <Choice label="2. 'AI가 우리 가게를 소개한 말'이 실제 가게와 맞았나요?" options={["맞음", "일부 맞음", "틀림", "소개 없음"]} value={feedback.accuracy} onPick={(v) => pickFeedback("accuracy", v)} />
+                    <Choice label="3. 'AI 답변에 함께 나온 가게'가 실제 경쟁 가게와 비슷했나요?" options={["비슷해요", "일부 비슷해요", "달라요", "잘 모르겠어요"]} value={feedback.competitors} onPick={(v) => pickFeedback("competitors", v)} />
+                    <Choice label="4. '개선 제안' 중 실제로 해 볼 만한 것이 있었나요?" options={["있음", "없음"]} value={feedback.useful} onPick={(v) => pickFeedback("useful", v)} />
                     <fieldset className="feedback-field">
-                      <legend>불편했던 점이나 더 있었으면 하는 기능</legend>
-                      <textarea value={feedback.comment} maxLength={300} placeholder="자유롭게 적어 주세요 (선택)" onChange={(e) => pickFeedback("comment", e.target.value)} />
+                      <legend>5. 리포트에서 불편했거나 더 보고 싶은 내용 (선택)</legend>
+                      <textarea value={feedback.comment} maxLength={300} placeholder="자유롭게 적어 주세요" onChange={(e) => pickFeedback("comment", e.target.value)} />
                     </fieldset>
+
+                    <div className="feedback-contact">
+                      <strong>리포트 받을 정보</strong>
+                      <label htmlFor="fb-name">이름 <span>*</span></label>
+                      <div className="input-wrap"><User size={16} /><input id="fb-name" value={feedback.name} maxLength={20} placeholder="예: 홍길동" onChange={(e) => pickFeedback("name", e.target.value)} /></div>
+                      <label htmlFor="fb-email">이메일 <span>*</span></label>
+                      <div className="input-wrap"><Mail size={16} /><input id="fb-email" type="email" value={feedback.email} maxLength={254} placeholder="name@example.com" onChange={(e) => pickFeedback("email", e.target.value)} /></div>
+                      <div className="consent-box">
+                        <label className="consent-label">
+                          <input type="checkbox" checked={feedback.consent} onChange={(e) => pickFeedback("consent", e.target.checked)} />
+                          <span className="custom-checkbox"><CheckCircle2 size={15} /></span>
+                          <span>
+                            <strong>[필수] 아래 내용을 확인했으며, 개인정보 수집·이용에 동의합니다.</strong>
+                            <small>수집 항목: 이름, 이메일 · 이용 목적: 진단 리포트 메일 발송과 보내 주신 의견 확인 · 보유 기간: 2026년 11월 24일까지(이후 파기) · 동의하지 않으셔도 진단 결과는 화면에서 볼 수 있지만, 리포트 메일은 받을 수 없어요.</small>
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+
                     {feedbackError && <p className="error-message">{feedbackError}</p>}
                     <div className="feedback-actions">
                       <button className="secondary-button" onClick={() => setFeedbackOpen(false)}>나중에 할게요</button>
                       <button className="submit-button" onClick={sendFeedback} disabled={feedbackState === "sending"}>
-                        {feedbackState === "sending" ? "보내는 중…" : "의견 보내기"}
+                        {feedbackState === "sending" ? "보내는 중…" : "의견 보내고 리포트 받기"}
                       </button>
                     </div>
                   </>

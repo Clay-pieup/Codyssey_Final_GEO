@@ -144,9 +144,9 @@ sequenceDiagram
 
 **`POST /api/places`** (가게 검색): `{"query": "명동교자 명동"}` → `{"ok", "error", "places": [{"name", "category", "address"(지번), "road_address", "region", "region_note"}]}` 최대 5개. `region`은 지번 주소에서 시·구·동까지 잘라 만든 값, `""`이면 `region_note`(읍·면 미지원, 동을 못 찾음)를 보여 주고 직접 입력. 검색어 2~40자, 네이버 열쇠는 서버 환경 변수에만. 네이버 클라우드 NAVER API HUB 주소(`naverapihub.apigw.ntruss.com/search/v1/local`)와 헤더(`X-NCP-APIGW-API-KEY-ID`·`X-NCP-APIGW-API-KEY`) 사용, 하루 한도 25,000회
 
-**`POST /api/feedback`** (사장님 의견 팝업): `{"owner": "예"|"아니요", "category", "clarity": 1~5, "accuracy", "useful", "comment"(300자), "context": {store, region, mention_rate, agent_ran}}` → `{"ok", "error"}`. 필수는 owner·clarity. 이름·연락처는 받지 않음. 서버가 확인 후 `FEEDBACK_WEBHOOK_URL`로 한 줄짜리 칸(`event: "feedback"`, `submitted_at` 한국 시각 포함)을 보냄
+**`POST /api/feedback`** (사장님 의견 팝업 "의견을 들려주시면 리포트를 메일로 발송해드립니다"): `{"clarity": 1~5, "accuracy", "competitors", "useful", "comment"(300자), "name", "email", "consent": true, "report": 리포트 전체}` → `{"ok", "feedback_saved", "mail_sent", "error"}`. 서버가 ① 의견만 `FEEDBACK_WEBHOOK_URL`(피드백 시트, 이름·이메일 없음)로, ② 리포트를 Make로 보내(`event: "feedback_report"`, `name` 칸 포함) 연락처 시트 기록 + 리포트 메일 발송. 이메일은 동의가 true일 때만
 
-**서버 → Make 웹훅 (한 줄짜리 칸 19개)**
+**서버 → Make 웹훅 (한 줄짜리 칸 20개)**
 
 | 칸 | 진단결과 시트 | 연락처 시트 | 메일 |
 | --- | :-: | :-: | :-: |
@@ -155,6 +155,7 @@ sequenceDiagram
 | `store` | ○ | ○ | ○ |
 | `diagnosed_at` (한국 시각) | ○ | ○ | |
 | `email`, `consent` (동의했을 때만) | | ○ | `email` = 받는 사람 |
+| `name` (의견 팝업에서 동의했을 때만, 10/31 추가) | | 연결 필요 | 연결 필요 |
 
 - 진단결과 시트에는 이메일을 넣지 않음. Make 필터: 이메일이 있고 동의가 true일 때만 연락처 기록·메일 발송. 연락처 시트는 2026-11-24 파기 (칸 연결: [블루프린트](../automation/make_scenario.json))
 - 웹훅 주소·API 키는 Vercel 환경 변수에만 (목록: [README 5-4](../README.md))

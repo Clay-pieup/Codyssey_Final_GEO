@@ -149,3 +149,9 @@ footer { display:flex; justify-content:space-between; align-items:center; gap:12
   .feedback-overlay { align-items:flex-end; padding:0; }
   .feedback-modal { max-width:none; max-height:88vh; border-radius:16px 16px 0 0; padding:20px 16px; }
 }
+.feedback-modal h3 { line-height:1.5; }
+.feedback-contact { margin-top:20px; padding-top:16px; border-top:1px solid #eff0f5; }
+.feedback-contact > strong { display:block; font-size:12px; color:#252941; }
+.feedback-contact label[for] { display:block; margin:12px 0 6px; font-size:11px; font-weight:700; color:#4a5068; }
+.feedback-contact label[for] span { color:#c53c54; }
+.feedback-contact .input-wrap { height:42px; }
