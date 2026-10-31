@@ -66,7 +66,6 @@ menu: ""
   const [moreError, setMoreError] = useState("");
   const [isRunningMore, setIsRunningMore] = useState(false);
   const [openQuestion, setOpenQuestion] = useState(null); // 결과에서 펼친 질문 (답변 원문 보기)
-  const [diagnosedAt, setDiagnosedAt] = useState(null);   // 결과를 받은 시각 (리포트 "점검 시각")
 
   const update = (key, value) => {
     setForm((old) => ({ ...old, [key]: value }));
@@ -178,7 +177,6 @@ menu: ""
       }
 
       setDiagnosisResult(report);
-      setDiagnosedAt(new Date());
       setOpenQuestion(null);
       setShowResult(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -246,7 +244,6 @@ menu: ""
   const summary = report.summary || {};
   const mention = summary.mention || {};
   const answers = report.answers || [];
-  const settings = report.settings || {};
   const rows = questionRows(report);
 
   // 사장님 의견 팝업: 리포트 맨 아래(결과 메일과 안내)까지 보면 한 번만 열림
@@ -463,18 +460,6 @@ menu: ""
             <div className="result-symbol"><BarChart3 size={28} /></div>
             <h1>{report.input?.store || form.storeName} <span>AI 점검 리포트</span></h1>
           </div>
-
-          {/* 1. 어떻게 점검했나: 입력 요약 + 어떤 AI로 물어봤는지 */}
-          <section className="result-section">
-            <div className="result-section-title"><h2>어떻게 점검했나요</h2></div>
-            <dl className="summary-grid">
-              <div><dt>지역</dt><dd>{report.input?.region}</dd></div>
-              <div><dt>대표 메뉴</dt><dd>{(report.input?.menus || []).join(", ")}</dd></div>
-              <div><dt>물어본 AI</dt><dd>Google Gemini ({report.model}){settings.use_search ? " · 웹 검색 사용" : ""}</dd></div>
-              <div><dt>질문 방식</dt><dd>손님 말투 질문 {rows.length}개 × {settings.repeat || 3}번 = 답변 {answers.length}개</dd></div>
-              {diagnosedAt && <div><dt>점검 시각</dt><dd>{diagnosedAt.toLocaleString("ko-KR", { dateStyle: "medium", timeStyle: "short" })}</dd></div>}
-            </dl>
-          </section>
 
           {/* 2. 핵심 숫자 */}
           <div className="result-cards">
