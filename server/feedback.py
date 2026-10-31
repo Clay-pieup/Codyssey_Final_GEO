@@ -27,7 +27,9 @@ REQUIRED = ("owner", "clarity")
 
 
 def _short_text(value, limit: int) -> str:
-    return value.strip()[:limit] if isinstance(value, str) else ""
+    """글자만 받고 길이를 자른다. =, +, -, @로 시작하면 시트가 수식으로 실행하지 않게 앞에 '를 붙인다."""
+    text = value.strip()[:limit] if isinstance(value, str) else ""
+    return "'" + text if text[:1] in ("=", "+", "-", "@") else text
 
 
 def check_feedback(data: dict) -> tuple[dict | None, list[str]]:
