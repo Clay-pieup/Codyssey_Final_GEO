@@ -64,7 +64,7 @@ sequenceDiagram
 | ⑤ | 언급 여부·순위·소개 문구·함께 나온 가게·출처 (3장 측정 방법) | 같은 질문의 답 3개를 한 번에 분석 → 분석 호출 30회 → 10회 | `ai/diagnosis.py` `analyze_all()` `summarize()` |
 | ⑥ | **할지 말지는 규칙**(30% 미만), **무엇을 물을지는 AI**. 도구 3개를 함수로 주면 Gemini가 1~2개를 골라 이유와 함께 호출 → 코드가 검사 후 실행 | G3 "AI가 2개 이상의 도구 중 스스로 고름". AI가 가게를 **모르는지 / 알지만 추천 안 하는지** 구분 | `ai/agent.py` `run_agent()`, `ai/gemini_client.py` `choose_tools()` |
 | ⑦ | 제목·할 일·근거 3개. 근거는 진단 결과 안의 숫자·가게 이름만 | 근거 없는 약속("노출 30% 상승") 방지 | `ai/diagnosis.py` `suggest()` |
-| ⑧ | 결과를 한 줄짜리 칸 19개로 Make에 전송 | 시트·메일을 코드 없이 연결, G3 "이벤트로 2개 이상 서비스가 사람 없이 이어짐". Make가 실패해도 화면 결과는 그대로 | `server/make_sender.py` |
+| ⑧ | 결과를 칸 21개(한 줄짜리 20개 + 메일 본문 HTML 1개)로 Make에 전송 | 시트·메일을 코드 없이 연결, G3 "이벤트로 2개 이상 서비스가 사람 없이 이어짐". Make가 실패해도 화면 결과는 그대로 | `server/make_sender.py`, `server/report_mail.py` |
 
 **"더 자세히 진단하기" 버튼**: ⑥이 자동으로 안 돌았을 때만 보임(`more_available`). 서버는 요청이 끝나면 내용을 잊으므로 **화면이 1차 리포트를 통째로 다시 보내고**(`POST /api/more`), 서버가 Agent를 1번 실행한 뒤 개선 제안을 다시 만든다(`run_more()`). 진단 1회당 1번.
 
@@ -144,9 +144,9 @@ sequenceDiagram
 
 **`POST /api/places`** (가게 검색): `{"query": "명동교자 명동"}` → `{"ok", "error", "places": [{"name", "category", "address"(지번), "road_address", "region", "region_note", "menus"}]}` 최대 5개. `menus`는 업종(예: 한식>칼국수,만두)에서 뽑은 대표 메뉴 후보(최대 3개, "카페"처럼 큰 분류만 있으면 빈 목록). `region`은 지번 주소에서 시·구·동까지 잘라 만든 값, `""`이면 `region_note`(읍·면 미지원, 동을 못 찾음)를 보여 주고 직접 입력. 검색어 2~40자, 네이버 열쇠는 서버 환경 변수에만. 네이버 클라우드 NAVER API HUB 주소(`naverapihub.apigw.ntruss.com/search/v1/local`)와 헤더(`X-NCP-APIGW-API-KEY-ID`·`X-NCP-APIGW-API-KEY`) 사용, 하루 한도 25,000회
 
-**`POST /api/feedback`** (사장님 의견 팝업 "의견을 들려주시면 리포트를 메일로 발송해드립니다"): `{"clarity": 1~5, "accuracy", "competitors", "useful", "comment"(300자), "name", "email", "consent": true, "report": 리포트 전체}` → `{"ok", "feedback_saved", "mail_sent", "error"}`. 서버가 ① 의견만 `FEEDBACK_WEBHOOK_URL`(피드백 시트, 이름·이메일 없음)로, ② 리포트를 Make로 보내(`event: "feedback_report"`, `name` 칸 포함) 연락처 시트 기록 + 리포트 메일 발송. 이메일은 동의가 true일 때만. 피드백 시트 기록은 구글 Apps Script 웹 앱([`automation/feedback_sheet.gs`](../automation/feedback_sheet.gs))
+**`POST /api/feedback`** (사장님 의견 팝업 "의견을 들려주시면 리포트를 메일로 발송해드립니다"): `{"clarity": 1~5, "accuracy", "competitors", "useful", "comment"(300자), "name", "email", "consent": true, "report": 리포트 전체}` → `{"ok", "feedback_saved", "mail_sent", "error"}`. 서버가 ① 의견만 `FEEDBACK_WEBHOOK_URL`(피드백 시트, 이름·이메일 없음)로, ② 리포트를 Make로 보내(`event: "feedback_report"`, `name`·`report_html` 칸 포함) 연락처 시트 기록 + 리포트 메일 발송. 이메일은 동의가 true일 때만. 피드백 시트 기록은 구글 Apps Script 웹 앱([`automation/feedback_sheet.gs`](../automation/feedback_sheet.gs))
 
-**서버 → Make 웹훅 (한 줄짜리 칸 20개)**
+**서버 → Make 웹훅 (칸 21개)**
 
 | 칸 | 진단결과 시트 | 연락처 시트 | 메일 |
 | --- | :-: | :-: | :-: |
@@ -156,8 +156,10 @@ sequenceDiagram
 | `diagnosed_at` (한국 시각) | ○ | ○ | |
 | `email`, `consent` (동의했을 때만) | | ○ | `email` = 받는 사람 |
 | `name` (의견 팝업에서 동의했을 때만, 10/31 추가) | | 연결 필요 | 연결 필요 |
+| `report_html` (메일 본문: 화면과 같은 형식의 리포트 HTML, 메일 보낼 때만, 10/31 추가) | | | 연결 필요 (본문 형식 Raw HTML) |
 
 - 진단결과 시트에는 이메일을 넣지 않음. Make 필터: 이메일이 있고 동의가 true일 때만 연락처 기록·메일 발송. 연락처 시트는 2026-11-24 파기 (칸 연결: [블루프린트](../automation/make_scenario.json))
+- 메일 본문 `report_html`은 서버([`server/report_mail.py`](../server/report_mail.py))가 화면 리포트와 같은 순서로 만듦. 메일 프로그램은 질문 펼치기·버튼을 막아 질문은 "3번 중 몇 번 언급"까지만, 답변 원문은 Gmail이 약 100KB 넘는 메일을 잘라서 넣지 않음. AI 답변에서 온 글자는 기호를 바꿔 넣음(메일 모양이 깨지지 않게)
 - 웹훅 주소·API 키는 Vercel 환경 변수에만 (목록: [README 5-4](../README.md))
 
 ## 6. 주요 결정과 근거
@@ -172,6 +174,7 @@ sequenceDiagram
 | 요청 1번으로 끝까지 기다림 | 단계별 요청 / 접수 후 확인 | 가장 단순. 결과 저장소가 필요 없음 |
 | 서버는 결과를 기억하지 않음 → 버튼은 화면이 리포트를 다시 보냄 | 서버에 저장 | Vercel은 요청마다 새로 시작, 저장소 추가 없이 해결 |
 | 결과 저장은 Make → 구글 시트 (요약만) | 데이터베이스 / 답변 원문까지 | 코드 없이 저장, 팀 전원 열람. 원문은 하나가 수천 자라 제외 |
+| 리포트 메일은 서버가 HTML로 만들어 Make에 넘김 (10/31) | Make 안에서 HTML 틀 짜기 / 메일엔 요약 + 화면 링크 / PDF 첨부 | 코드가 레포에 남아 테스트·설명 가능, 새 라이브러리 0개. 링크는 리포트 저장소가 새로 필요, PDF는 라이브러리·한글 글꼴 문제 |
 | 출처를 사이트 이름으로 분류 | 출처 주소로 분류 | Gemini가 Google 중간 주소를 줘서 131개 모두 "기타"였음(10/22) |
 | **RAG·Long-term Memory는 쓰지 않음** `[AI 담당 확인]` | 사용 | 진단은 매번 "지금 AI가 어떻게 답하나"를 재는 일이라 미리 모은 문서를 넣으면 측정이 왜곡됨. 웹 검색은 Gemini 기능(Grounding)으로 사용. 로그인·이력이 없어 사용자별 기억할 정보도 없음 |
 
