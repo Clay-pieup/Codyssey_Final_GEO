@@ -1,13 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  ArrowRight, BarChart3, Bot, CheckCircle2, ChevronRight, CircleHelp,
+  ArrowRight, BarChart3, Bot, CheckCircle2, ChevronRight,
   ClipboardCheck, Compass, Mail, MapPin, Search, ShieldCheck, Store,
   User, Utensils, WandSparkles, X
 } from "lucide-react";
 import { ReportHero, ReportOverview } from "./ReportDashboard.jsx";
 import { ReportSuggestions } from "./ReportSuggestions.jsx";
 import { ReportQuestions } from "./ReportQuestions.jsx";
+import { ReportAgent } from "./ReportAgent.jsx";
 import "./styles.css";
 
 // ---------- 사장님 의견 팝업 (피드백, 10/31 화면 담당과 현장 논의) ----------
@@ -441,24 +442,8 @@ menu: ""
           {/* 3. 질문별 AI 답변 (리포트 개편 단위 4: ReportQuestions.jsx). "소개한 말"·"함께 나온 가게" 칸은 한눈에 보기 카드로 옮김 */}
           <ReportQuestions report={report} rows={rows} key={report.input?.store + (report.answers || []).length} />
 
-          {/* 7. AI 추가 진단 (Agent) */}
-          {report.agent?.ran && (
-            <section className="result-section">
-              <div className="result-section-title"><h2>AI 추가 진단</h2><span>{report.agent.trigger === "button" ? "더 자세히 진단하기" : "언급률이 낮아 자동 실행"}</span></div>
-              {report.agent.reason_to_run && <p className="muted">{report.agent.reason_to_run}</p>}
-              {(report.agent.trace || []).map((item, index) => (
-                <div className="recommendation" key={index}>
-                  <span className="recommend-number">{String(index + 1).padStart(2, "0")}</span>
-                  <div>
-                    <strong>{item.tool_label || "추가 진단"}</strong>
-                    {item.question && <p>추가 질문: "{item.question}"</p>}
-                    <p>AI가 이 질문을 고른 이유: {item.why || "별도 설명 없음"}</p>
-                    <small>결과: 정상 답변 {item.result?.valid ?? 0}개 중 {item.result?.mentioned ?? 0}개에서 언급</small>
-                  </div>
-                </div>
-              ))}
-            </section>
-          )}
+          {/* 7. AI 추가 진단 (Agent). 추가 진단 전이면 이 자리에 [더 자세히 진단하기] 안내 카드 (ReportAgent.jsx) */}
+          <ReportAgent report={report} onMore={runMoreDiagnosis} isRunningMore={isRunningMore} moreError={moreError} />
 
           {/* 8. 개선 제안 (리포트 개편 단위 3: ReportSuggestions.jsx). 추가 진단으로 제안이 바뀌면 key가 바뀌어 "해 볼게요" 선택도 처음부터 */}
           <ReportSuggestions report={report} key={(report.suggestions || []).map((s) => s.title).join("|")} />
@@ -477,24 +462,12 @@ menu: ""
             {report.notice && <p className="muted">{report.notice}</p>}
           </section>
 
-          {moreError && (
-            <div className="demo-alert" role="alert">
-              <CircleHelp size={20} />
-              <p>{moreError}</p>
-            </div>
-          )}
-
           <div className="result-actions">
             <button className="secondary-button" onClick={reset}>입력 화면으로 돌아가기</button>
-            <button className="secondary-button" onClick={openFeedback} disabled={feedbackState === "done"}>
+            {/* [더 자세히 진단하기]는 "AI 추가 진단" 칸으로 옮김 → 맨 아래 주 버튼은 의견 남기기 */}
+            <button className={feedbackState === "done" ? "secondary-button" : "submit-button"} onClick={openFeedback} disabled={feedbackState === "done"}>
               {feedbackState === "done" ? "의견 고맙습니다" : "의견 남기고 리포트 받기"}
             </button>
-            {report.more_available && (
-              <button className="submit-button" onClick={runMoreDiagnosis} disabled={isRunningMore}>
-                {isRunningMore ? "더 자세히 진단하는 중..." : "더 자세히 진단하기"}
-                <ArrowRight size={17} />
-              </button>
-            )}
           </div>
           {feedbackOpen && (
             <div className="feedback-overlay" onClick={(e) => { if (e.target === e.currentTarget) setFeedbackOpen(false); }}>
