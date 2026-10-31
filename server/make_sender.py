@@ -11,6 +11,8 @@ import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
+from server.report_mail import build_report_html
+
 KST = timezone(timedelta(hours=9))  # 한국 시각
 TIMEOUT_SEC = 10  # Make가 응답하지 않을 때 오래 기다리지 않음
 
@@ -67,6 +69,8 @@ def build_payload(report: dict, event: str, email: str, name: str = "") -> dict:
         "email": email,              # 동의한 이메일만 (아니면 빈칸) → Make가 빈칸이면 메일·연락처 단계를 건너뜀
         "consent": bool(email),
         "name": name if email else "",  # 의견 팝업에서 받은 이름 (동의한 경우만, 메일 인사말·연락처용)
+        # 메일 본문: 화면과 같은 형식의 리포트 HTML (메일을 보낼 때만 만듦. 시트 기록용 이벤트에는 빈칸)
+        "report_html": build_report_html(report, name) if email else "",
     }
 
 
