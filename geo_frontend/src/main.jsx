@@ -25,7 +25,6 @@ function siteNames(answer) {
 }
 
 // ---------- 사장님 의견 팝업 (피드백, 10/31 화면 담당과 현장 논의) ----------
-const FEEDBACK_ASKED_KEY = "feedback-asked-v1"; // 이 브라우저에서 팝업을 이미 띄웠는지 (다시 안 띄우려고)
 const EMPTY_FEEDBACK = { clarity: 0, accuracy: "", competitors: "", useful: "", comment: "", name: "", email: "", consent: false };
 
 // 보기 중 하나를 고르는 문항 (버튼 묶음)
@@ -195,6 +194,12 @@ menu: ""
   setDiagnosisResult(null);
   setError("");
   setMoreError("");
+  // 새 진단 = 새 리포트 → 의견 팝업도 처음 상태로. 이름·이메일은 다시 안 쓰게 남기고, 답과 동의는 다시 고름
+  setFeedback((old) => ({ ...EMPTY_FEEDBACK, name: old.name, email: old.email }));
+  setFeedbackState("idle");
+  setFeedbackResult(null);
+  setFeedbackError("");
+  setFeedbackOpen(false);
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
@@ -252,17 +257,14 @@ menu: ""
   const [feedbackResult, setFeedbackResult] = useState(null); // 서버 응답 (메일 발송 성공 여부)
   const reportEndRef = useRef(null);
 
+  // 진단할 때마다 한 번: 새 결과가 나오면(showResult가 true로 바뀌면) 리포트 끝을 새로 지켜봄 (10/31 팀장 결정, 전에는 브라우저당 한 번)
   useEffect(() => {
     if (!showResult || !reportEndRef.current) return undefined;
-    let asked = false;
-    try { asked = localStorage.getItem(FEEDBACK_ASKED_KEY) === "1"; } catch { asked = false; }
-    if (asked) return undefined;
     // 화면에 리포트 끝이 보이는 순간을 알려 주는 브라우저 기능 (스크롤 위치를 계속 계산하지 않아도 됨)
     const observer = new IntersectionObserver((entries) => {
       if (entries.some((entry) => entry.isIntersecting)) {
         openFeedback();
-        try { localStorage.setItem(FEEDBACK_ASKED_KEY, "1"); } catch { /* 저장이 막혀도 이번 한 번만 열림 */ }
-        observer.disconnect();
+        observer.disconnect(); // 같은 진단에서는 닫은 뒤 다시 스크롤해도 안 열림 (버튼으로는 열 수 있음)
       }
     }, { threshold: 0.6 });
     observer.observe(reportEndRef.current);
