@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   ArrowRight, BarChart3, Bot, CheckCircle2, ChevronRight, CircleHelp,
   ChevronDown, ClipboardCheck, Compass, Mail, MapPin, Search, ShieldCheck, Store,
-  Utensils, WandSparkles
+  Utensils, WandSparkles, X
 } from "lucide-react";
 import "./styles.css";
 
@@ -22,6 +22,28 @@ function siteNames(answer) {
     }
   });
   return [...new Set(names.filter(Boolean))];
+}
+
+// ---------- 사장님 의견 팝업 (피드백, 10/31 화면 담당과 현장 논의) ----------
+const FEEDBACK_ASKED_KEY = "feedback-asked-v1"; // 이 브라우저에서 팝업을 이미 띄웠는지 (다시 안 띄우려고)
+const EMPTY_FEEDBACK = { owner: "", category: "", clarity: 0, accuracy: "", useful: "", comment: "" };
+const FEEDBACK_CATEGORIES = ["한식", "중식", "일식", "양식", "분식", "카페", "주점", "기타"]; // 서버 보기와 같아야 함
+
+// 보기 중 하나를 고르는 문항 (버튼 묶음)
+function Choice({ label, options, value, onPick, hint }) {
+  return (
+    <fieldset className="feedback-field">
+      <legend>{label}</legend>
+      <div className="choice-row">
+        {options.map((option) => (
+          <button type="button" key={option} className={value === option ? "choice on" : "choice"} aria-pressed={value === option} onClick={() => onPick(option)}>
+            {option}
+          </button>
+        ))}
+      </div>
+      {hint && <small>{hint}</small>}
+    </fieldset>
+  );
 }
 
 // 질문 10개마다 답변 3개를 묶어 "정상 답변 중 몇 번 언급"을 센다 (서버가 Make에 보내는 질문별 결과와 같은 방식)
@@ -224,6 +246,65 @@ consent: false
   const settings = report.settings || {};
   const delivery = report.delivery || {};
   const rows = questionRows(report);
+
+  // 사장님 의견 팝업: 리포트 맨 아래(결과 메일과 안내)까지 보면 한 번만 열림
+  const [feedback, setFeedback] = useState(EMPTY_FEEDBACK);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackState, setFeedbackState] = useState("idle"); // idle → sending → done
+  const [feedbackError, setFeedbackError] = useState("");
+  const reportEndRef = useRef(null);
+
+  useEffect(() => {
+    if (!showResult || !reportEndRef.current) return undefined;
+    let asked = false;
+    try { asked = localStorage.getItem(FEEDBACK_ASKED_KEY) === "1"; } catch { asked = false; }
+    if (asked) return undefined;
+    // 화면에 리포트 끝이 보이는 순간을 알려 주는 브라우저 기능 (스크롤 위치를 계속 계산하지 않아도 됨)
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        setFeedbackOpen(true);
+        try { localStorage.setItem(FEEDBACK_ASKED_KEY, "1"); } catch { /* 저장이 막혀도 이번 한 번만 열림 */ }
+        observer.disconnect();
+      }
+    }, { threshold: 0.6 });
+    observer.observe(reportEndRef.current);
+    return () => observer.disconnect();
+  }, [showResult]);
+
+  const pickFeedback = (key, value) => {
+    setFeedback((old) => ({ ...old, [key]: value }));
+    setFeedbackError("");
+  };
+
+  const sendFeedback = async () => {
+    if (!feedback.owner || !feedback.clarity) {
+      setFeedbackError("*표시 문항(외식업 운영 여부, 이해하기 쉬웠는지)은 꼭 골라 주세요.");
+      return;
+    }
+    setFeedbackState("sending");
+    setFeedbackError("");
+    try {
+      const response = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...feedback,
+          // 어떤 진단을 보고 남긴 의견인지 대조용 (이름·연락처는 보내지 않음)
+          context: { store: report.input?.store, region: report.input?.region, mention_rate: mention.rate, agent_ran: !!report.agent?.ran },
+        }),
+      });
+      const data = await response.json();
+      if (!data.ok) {
+        setFeedbackError(data.error || "의견을 보내지 못했어요. 잠시 후 다시 보내 주세요.");
+        setFeedbackState("idle");
+        return;
+      }
+      setFeedbackState("done");
+    } catch (e) {
+      setFeedbackError("의견을 보내지 못했어요. 잠시 후 다시 보내 주세요.");
+      setFeedbackState("idle");
+    }
+  };
 
   return (
     <div className="app-shell">
@@ -556,7 +637,7 @@ consent: false
           </section>
 
           {/* 9. 결과 메일 + 안내 */}
-          <section className="result-section">
+          <section className="result-section" ref={reportEndRef}>
             <div className="result-section-title"><h2>결과 메일과 안내</h2></div>
             <p className="muted">
               <Mail size={14} />{" "}
@@ -578,6 +659,9 @@ consent: false
 
           <div className="result-actions">
             <button className="secondary-button" onClick={reset}>입력 화면으로 돌아가기</button>
+            <button className="secondary-button" onClick={() => setFeedbackOpen(true)} disabled={feedbackState === "done"}>
+              {feedbackState === "done" ? "의견 고맙습니다" : "의견 남기기"}
+            </button>
             {report.more_available && (
               <button className="submit-button" onClick={runMoreDiagnosis} disabled={isRunningMore}>
                 {isRunningMore ? "더 자세히 진단하는 중..." : "더 자세히 진단하기"}
@@ -585,6 +669,45 @@ consent: false
               </button>
             )}
           </div>
+          {feedbackOpen && (
+            <div className="feedback-overlay" onClick={(e) => { if (e.target === e.currentTarget) setFeedbackOpen(false); }}>
+              <div className="feedback-modal" role="dialog" aria-modal="true" aria-labelledby="feedback-title">
+                <button type="button" className="feedback-close" aria-label="닫기" onClick={() => setFeedbackOpen(false)}><X size={18} /></button>
+                {feedbackState === "done" ? (
+                  <div className="feedback-done">
+                    <CheckCircle2 size={30} />
+                    <h3>고맙습니다!</h3>
+                    <p>남겨 주신 의견은 서비스를 고치는 데 쓸게요.</p>
+                    <button className="submit-button" onClick={() => setFeedbackOpen(false)}>닫기</button>
+                  </div>
+                ) : (
+                  <>
+                    <h3 id="feedback-title">사장님 의견을 들려주세요 <small>1분</small></h3>
+                    <p className="feedback-note">이름·연락처는 받지 않아요. 남긴 의견은 서비스를 고치는 데만 써요.</p>
+                    <Choice label="외식업(음식점·카페 등)을 운영하고 계신가요? *" options={["예", "아니요"]} value={feedback.owner} onPick={(v) => pickFeedback("owner", v)} />
+                    {feedback.owner === "예" && (
+                      <Choice label="업종" options={FEEDBACK_CATEGORIES} value={feedback.category} onPick={(v) => pickFeedback("category", v)} />
+                    )}
+                    <Choice label="진단 결과를 이해하기 쉬웠나요? *" options={[1, 2, 3, 4, 5]} value={feedback.clarity} onPick={(v) => pickFeedback("clarity", v)} hint="1 어려웠어요 · 5 쉬웠어요" />
+                    <Choice label="AI가 우리 가게를 소개한 말이 실제와 맞았나요?" options={["맞음", "일부 맞음", "틀림", "소개 없음"]} value={feedback.accuracy} onPick={(v) => pickFeedback("accuracy", v)} />
+                    <Choice label="개선 제안 중 실제로 해 볼 만한 것이 있었나요?" options={["있음", "없음"]} value={feedback.useful} onPick={(v) => pickFeedback("useful", v)} />
+                    <fieldset className="feedback-field">
+                      <legend>불편했던 점이나 더 있었으면 하는 기능</legend>
+                      <textarea value={feedback.comment} maxLength={300} placeholder="자유롭게 적어 주세요 (선택)" onChange={(e) => pickFeedback("comment", e.target.value)} />
+                    </fieldset>
+                    {feedbackError && <p className="error-message">{feedbackError}</p>}
+                    <div className="feedback-actions">
+                      <button className="secondary-button" onClick={() => setFeedbackOpen(false)}>나중에 할게요</button>
+                      <button className="submit-button" onClick={sendFeedback} disabled={feedbackState === "sending"}>
+                        {feedbackState === "sending" ? "보내는 중…" : "의견 보내기"}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
           <footer>
             <span>우리가게 AI 점검</span>
             <span>AI가 생성한 추정치 · 실제 AI 앱 답변과 다를 수 있음</span>

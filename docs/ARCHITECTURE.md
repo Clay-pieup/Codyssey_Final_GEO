@@ -16,6 +16,7 @@ flowchart LR
     S -->|리포트| F
     F -->|POST /api/places| S
     S -->|가게 이름 검색| N[네이버<br/>지역 검색]
+    S -->|사장님 의견| FB[피드백 시트]
     S -->|웹훅: 진단 완료| M[Make]
     M --> SH[구글 시트<br/>진단결과 · 연락처]
     M --> GM[Gmail<br/>결과 메일]
@@ -24,7 +25,7 @@ flowchart LR
 | 구성 요소 | 위치 | 역할 | 담당 |
 | --- | --- | --- | --- |
 | 화면 | `geo_frontend/src/main.jsx` | 입력·동의, 결과·추가 진단 표시, 버튼 | 화면·배포 |
-| 서버 | `api/diagnose.py`, `api/more.py`, `api/places.py`, `server/` | 요청 확인 → AI 진단 실행 → Make 전달 → 응답 / 가게 검색은 네이버에 대신 물어봄 | 팀장 |
+| 서버 | `api/diagnose.py`, `api/more.py`, `api/places.py`, `api/feedback.py`, `server/` | 요청 확인 → AI 진단 실행 → Make 전달 → 응답 / 가게 검색은 네이버에 대신 물어봄 | 팀장 |
 | AI 진단 | `ai/` (Gemini 호출은 `ai/gemini_client.py` 한 곳), 프롬프트 `ai/prompts/` | 질문 생성 → 질의 → 분석 → Agent → 개선 제안 | AI |
 | 자동화 | Make 시나리오 ([`automation/make_scenario.json`](../automation/make_scenario.json)) | 시트 기록, 메일 발송 | 화면·배포 |
 | 배포 | Vercel (`vercel.json`) | 화면과 서버를 한 주소로. main에 합치면 자동 배포 | 팀장 |
@@ -142,6 +143,8 @@ sequenceDiagram
 **`POST /api/more`**: `{"report": 1차 리포트, "email", "consent"}` → `agent`·`suggestions`가 새로 채워진 리포트 + `more_error`(실패 시 안내 한 줄). 이미 추가 진단한 리포트면 실행하지 않음
 
 **`POST /api/places`** (가게 검색): `{"query": "명동교자 명동"}` → `{"ok", "error", "places": [{"name", "category", "address"(지번), "road_address", "region", "region_note"}]}` 최대 5개. `region`은 지번 주소에서 시·구·동까지 잘라 만든 값, `""`이면 `region_note`(읍·면 미지원, 동을 못 찾음)를 보여 주고 직접 입력. 검색어 2~40자, 네이버 열쇠는 서버 환경 변수에만. 네이버 클라우드 NAVER API HUB 주소(`naverapihub.apigw.ntruss.com/search/v1/local`)와 헤더(`X-NCP-APIGW-API-KEY-ID`·`X-NCP-APIGW-API-KEY`) 사용, 하루 한도 25,000회
+
+**`POST /api/feedback`** (사장님 의견 팝업): `{"owner": "예"|"아니요", "category", "clarity": 1~5, "accuracy", "useful", "comment"(300자), "context": {store, region, mention_rate, agent_ran}}` → `{"ok", "error"}`. 필수는 owner·clarity. 이름·연락처는 받지 않음. 서버가 확인 후 `FEEDBACK_WEBHOOK_URL`로 한 줄짜리 칸(`event: "feedback"`, `submitted_at` 한국 시각 포함)을 보냄
 
 **서버 → Make 웹훅 (한 줄짜리 칸 19개)**
 

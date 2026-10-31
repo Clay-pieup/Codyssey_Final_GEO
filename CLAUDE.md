@@ -15,7 +15,7 @@
 | 폴더·파일 | 내용 | 담당 (고치기 전 확인) |
 | --- | --- | --- |
 | `geo_frontend/` | 화면 (React + Vite) | 화면·배포 |
-| `api/`, `server/` | 서버: `/api/diagnose`, `/api/more`, `/api/places`(가게 검색), Make 웹훅 전송 | 팀장 |
+| `api/`, `server/` | 서버: `/api/diagnose`, `/api/more`, `/api/places`(가게 검색), `/api/feedback`(사장님 의견), Make 웹훅 전송 | 팀장 |
 | `ai/` | AI 진단 (질문 생성 → 질의 → 분석 → Agent → 개선 제안) | AI |
 | `ai/prompts/` | 프롬프트 파일. 바꾸면 `ai/prompts/CHANGELOG.md`에 이유 한 줄 | AI |
 | `automation/make_scenario.json` | Make 시나리오 블루프린트 (비밀값은 `REMOVED`) | 화면·배포 |
