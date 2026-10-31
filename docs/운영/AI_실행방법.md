@@ -241,7 +241,7 @@ python -m ai.measure
 | `suggestions[]` | `title`, `detail`, `evidence` | 개선 제안 3개와 근거 |
 | `notice` | `"AI가 생성한 추정치입니다…"` | 화면·메일에 표시할 안내 문구 |
 
-- 전체 칸 설명: [AI 진단 입출력](../기술/AI_진단_입출력.md)
+- 전체 칸 설명: [ARCHITECTURE 5장(약속)](../ARCHITECTURE.md)
 
 ### 4-7. 배포된 서버에 직접 요청해 보기 (설치 없이, 선택)
 

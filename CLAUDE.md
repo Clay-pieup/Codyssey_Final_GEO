@@ -23,7 +23,7 @@
 | `README.md`, `docs/기획서.md`, `docs/기능요구명세서.md` | 제출 문서 | **팀장만 수정** |
 | `docs/작업기록/` | 담당자별 작업 기록 (`AI.md`, `화면배포.md`) | 각 담당 |
 
-- 화면 ↔ 서버 약속: [docs/기술/API_명세.md](docs/기술/API_명세.md) / 서버 ↔ AI 약속: [docs/기술/AI_진단_입출력.md](docs/기술/AI_진단_입출력.md)
+- 화면 ↔ 서버 ↔ AI ↔ Make 약속(요청·리포트 칸·Make 19칸): [ARCHITECTURE 5장](docs/ARCHITECTURE.md)
 - **약속(요청·응답 칸 이름)을 바꾸면 반드시 해당 명세 문서도 같이 고치고, 상대 담당에게 알린다.**
 
 ## 3. 실행·확인 명령
@@ -77,13 +77,13 @@ npm run preview               # 브라우저에서 실제로 열어 화면이 �
 
 ## 6. AI 폴더(`ai/`) 작업 규칙
 
-AI 부분 요약은 [AI 한눈에 보기](docs/기술/AI_한눈에보기.md). 고치기 전에 아래를 지킨다.
+AI 부분 구조·측정 방법·설정 근거는 [ARCHITECTURE 2~4장](docs/ARCHITECTURE.md). 고치기 전에 아래를 지킨다.
 
 | 고치려는 것 | 지킬 것 |
 | --- | --- |
 | 프롬프트 (`ai/prompts/*.md`) | 코드에 프롬프트를 직접 쓰지 않는다. 바꾸면 `ai/prompts/CHANGELOG.md` 맨 위에 "무엇을·왜·결과" 한 줄 |
 | Gemini 호출 | 모든 호출은 `ai/gemini_client.py`를 거친다. 다른 파일에서 SDK를 직접 부르지 않는다 |
-| 리포트 칸 이름 (`run_diagnosis`, `run_more` 결과) | 서버·화면·Make가 쓰는 약속이다. 바꾸면 [AI 진단 입출력](docs/기술/AI_진단_입출력.md)을 고치고 팀장에게 알린다 |
+| 리포트 칸 이름 (`run_diagnosis`, `run_more` 결과) | 서버·화면·Make가 쓰는 약속이다. 바꾸면 [ARCHITECTURE 5장(약속)](docs/ARCHITECTURE.md)을 고치고 팀장에게 알린다 |
 | AI Agent (`ai/agent.py`) | 질문 도구는 **2개 이상** 유지 (G3 인정 조건). 할지 말지는 규칙(언급률 30%), 무엇을 물을지는 AI가 정하는 구조를 바꾸지 않는다 |
 | 개선 제안 | 근거는 진단 결과의 숫자·가게 이름·Agent 답변으로만. 근거 없는 수치("노출 30% 상승")를 약속하지 않는다 |
 | Must 이름 | ① 진단 실행 / ② AI Agent 추가 진단 / ③ 결과 자동 전달. 문서마다 같은 이름을 쓴다 |

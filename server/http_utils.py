@@ -1,6 +1,6 @@
 """요청 읽기·응답 보내기·이메일 확인. api/diagnose.py와 api/more.py가 함께 쓴다.
 
-근거: docs/기술/API_명세.md 1-3 (HTTP 상태), 1-1 (이메일은 동의했을 때만)
+근거: docs/ARCHITECTURE.md 5장 (HTTP 상태, 이메일은 동의했을 때만)
 """
 
 import json

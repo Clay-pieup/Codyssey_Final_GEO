@@ -2,7 +2,7 @@
 
 흐름: 요청 읽기 → 1차 리포트 확인 → Agent 추가 진단(run_more) → Make로 결과 전달 → 리포트 응답
 서버는 1차 진단을 기억하지 못하므로 화면이 1차 리포트를 그대로 다시 보낸다.
-약속: docs/기술/API_명세.md 2장 / 설명: docs/기술/서버_해설.md
+약속·설명: docs/ARCHITECTURE.md 2·5장
 """
 
 import os
