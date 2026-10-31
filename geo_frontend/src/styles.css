@@ -210,3 +210,45 @@ footer { display:flex; justify-content:space-between; align-items:center; gap:12
   .rp-tile { padding:20px; }
   .rp-heat-wrap { grid-template-columns:1fr; }
 }
+
+/* ---------- 결과 리포트: 개선 제안 (리포트 개편 단위 3, ReportSuggestions.jsx) ---------- */
+.rp-actions { margin:28px 0; }
+.rp-tag { display:inline-grid; place-items:center; flex-shrink:0; width:24px; height:24px; border-radius:8px; color:white; font-size:12px; font-weight:800; }
+.rp-tag.none { color:#4e5968; background:#d1d6db; }
+.rp-spot { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:24px; align-items:center; padding:30px; color:white; background:#6655db; border-radius:24px; }
+.rp-spot-kicker { display:flex; align-items:center; gap:8px; margin:0; font-size:13px; font-weight:700; opacity:.9; }
+.rp-spot h3 { margin:10px 0 0; font-size:24px; font-weight:800; line-height:1.35; letter-spacing:-.6px; word-break:keep-all; }
+.rp-spot-detail { margin:8px 0 0; font-size:14px; line-height:1.7; opacity:.92; }
+.rp-spot-why { display:inline-block; margin:14px 0 0; padding:6px 12px; font-size:13px; font-weight:700; background:#ffffff26; border-radius:16px; line-height:1.5; }
+.rp-spot-reason { margin:8px 0 0; font-size:12px; opacity:.8; }
+.rp-spot-btn { margin-top:16px; padding:11px 18px; border:0; border-radius:12px; color:#4b3cc0; background:white; font-size:14px; font-weight:800; cursor:pointer; }
+.rp-spot-btn[aria-pressed="true"] { color:white; background:#ffffff33; }
+.rp-spot-btn:focus-visible, .rp-todo input:focus-visible { outline:2px solid #191f28; outline-offset:2px; }
+.rp-spot-ring { position:relative; width:112px; height:112px; }
+.rp-spot-ring span { position:absolute; inset:0; display:grid; place-content:center; text-align:center; font-size:22px; font-weight:800; line-height:1.15; }
+.rp-spot-ring small { display:block; font-size:11px; font-weight:500; opacity:.85; }
+.rp-act-grid { display:grid; grid-template-columns:minmax(0,5fr) minmax(0,7fr); gap:14px; margin-top:14px; }
+.rp-weak { display:flex; flex-direction:column; gap:12px; padding:22px; background:#f3f3f7; border-radius:24px; }
+.rp-weak-row { display:grid; grid-template-columns:24px minmax(0,1fr) auto; gap:4px 10px; align-items:center; font-size:13px; }
+.rp-weak-label { overflow:hidden; color:#191f28; text-overflow:ellipsis; white-space:nowrap; }
+.rp-weak-row b { color:#f04452; font-variant-numeric:tabular-nums; }
+.rp-weak-bar { grid-column:2 / -1; height:7px; border-radius:4px; background:white; overflow:hidden; }
+.rp-weak-bar i { display:block; height:100%; border-radius:4px; background:#f04452; }
+.rp-missed { margin:2px 0 0; padding:8px 10px; color:#9a6a12; background:#fff4dc; border-radius:10px; font-size:12px; line-height:1.6; }
+.rp-todos { display:flex; flex-direction:column; gap:10px; }
+.rp-progress { display:flex; align-items:center; gap:12px; color:#4e5968; font-size:13px; font-weight:700; }
+.rp-progress-track { flex:1; height:8px; border-radius:4px; background:#f3f3f7; overflow:hidden; }
+.rp-progress-track i { display:block; height:100%; border-radius:4px; background:#6655db; transition:width .25s; }
+.rp-todo { display:grid; grid-template-columns:auto minmax(0,1fr); gap:14px; align-items:start; padding:18px 20px; background:#f3f3f7; border-radius:18px; cursor:pointer; }
+.rp-todo input { width:20px; height:20px; margin-top:2px; accent-color:#6655db; }
+.rp-todo-body { display:flex; flex-direction:column; gap:6px; min-width:0; }
+.rp-todo-top { display:flex; align-items:center; gap:8px; color:#4e5968; font-size:12px; font-weight:700; }
+.rp-todo strong { font-size:16px; font-weight:800; letter-spacing:-.4px; }
+.rp-todo-detail { color:#4e5968; font-size:13px; line-height:1.7; }
+.rp-todo-ev { align-self:flex-start; padding:4px 10px; color:#f04452; background:#ffeeee; border-radius:8px; font-size:12px; font-weight:700; line-height:1.5; }
+@media (max-width: 760px) {
+  .rp-spot { grid-template-columns:1fr; padding:24px; }
+  .rp-spot h3 { font-size:21px; }
+  .rp-act-grid { grid-template-columns:1fr; }
+}
+@media (prefers-reduced-motion: reduce) { .rp-progress-track i { transition:none; } }

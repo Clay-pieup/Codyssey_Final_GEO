@@ -16,7 +16,7 @@ export function gradeOf(rate) {
 }
 
 // 받침이 있으면 앞 조사(이·을), 없으면 뒤 조사(가·를). 한글이 아닌 글자로 끝나면 받침 없음으로 봄
-function josa(word, withBatchim, without) {
+export function josa(word, withBatchim, without) {
   const code = String(word).trim().slice(-1).charCodeAt(0) - 0xac00;
   const hasBatchim = code >= 0 && code <= 11171 && code % 28 !== 0;
   return `${word}${hasBatchim ? withBatchim : without}`;
@@ -26,14 +26,14 @@ function josa(word, withBatchim, without) {
 const keyOf = (name) => String(name || "").replace(/\s/g, "").toLowerCase();
 
 // 도넛: 같은 원을 여러 번 겹쳐 그리고, 원마다 테두리를 "자기 몫(둘레 × 비율)"만큼만 칠한다
-function Ring({ parts, size = 132, stroke = 22 }) {
+export function Ring({ parts, size = 132, stroke = 22, track = "#ffffff" }) {
   const r = (size - stroke) / 2;
   const C = 2 * Math.PI * r;                                    // 원 둘레
   const total = parts.reduce((sum, p) => sum + p.value, 0) || 1;
   let start = 0;
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="rp-ring" role="img" aria-label={parts.map((p) => `${p.label} ${p.value}`).join(", ")}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#ffffff" strokeWidth={stroke} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={track} strokeWidth={stroke} />
       {parts.map((p) => {
         const length = C * (p.value / total);                    // 이 조각이 칠할 길이
         const arc = (

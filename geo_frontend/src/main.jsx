@@ -6,6 +6,7 @@ import {
   User, Utensils, WandSparkles, X
 } from "lucide-react";
 import { ReportHero, ReportOverview } from "./ReportDashboard.jsx";
+import { ReportSuggestions } from "./ReportSuggestions.jsx";
 import "./styles.css";
 
 // ---------- 결과 리포트 계산 (화면 담당과 현장 논의, 10/31) ----------
@@ -541,24 +542,8 @@ menu: ""
             </section>
           )}
 
-          {/* 8. 개선 제안 */}
-          <section className="result-section">
-            <div className="result-section-title"><h2>개선 제안</h2><span>근거는 위 진단 결과</span></div>
-            {(report.suggestions || []).length > 0 ? (
-              report.suggestions.slice(0, 3).map((sg, index) => (
-                <div className="recommendation" key={index}>
-                  <span className="recommend-number">{String(index + 1).padStart(2, "0")}</span>
-                  <div>
-                    <strong>{sg.title}</strong>
-                    <p>{sg.detail}</p>
-                    {sg.evidence && <small>근거: {sg.evidence}</small>}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="muted">개선 제안을 만들지 못했어요. 다시 진단해 주세요.</p>
-            )}
-          </section>
+          {/* 8. 개선 제안 (리포트 개편 단위 3: ReportSuggestions.jsx). 추가 진단으로 제안이 바뀌면 key가 바뀌어 "해 볼게요" 선택도 처음부터 */}
+          <ReportSuggestions report={report} key={(report.suggestions || []).map((s) => s.title).join("|")} />
 
           {/* 9. 결과 메일 + 안내 */}
           <section className="result-section" ref={reportEndRef}>
