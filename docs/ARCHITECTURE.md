@@ -24,7 +24,7 @@ flowchart LR
 
 | 구성 요소 | 위치 | 역할 | 담당 |
 | --- | --- | --- | --- |
-| 화면 | `geo_frontend/src/main.jsx` | 입력·동의, 결과·추가 진단 표시, 버튼 | 화면·배포 |
+| 화면 | `geo_frontend/src/main.jsx`, `ReportDashboard.jsx`(결과 요약 띠·한눈에 보기) | 입력·동의, 결과·추가 진단 표시, 버튼 | 화면·배포 |
 | 서버 | `api/diagnose.py`, `api/more.py`, `api/places.py`, `api/feedback.py`, `server/` | 요청 확인 → AI 진단 실행 → Make 전달 → 응답 / 가게 검색은 네이버에 대신 물어봄 | 팀장 |
 | AI 진단 | `ai/` (Gemini 호출은 `ai/gemini_client.py` 한 곳), 프롬프트 `ai/prompts/` | 질문 생성 → 질의 → 분석 → Agent → 개선 제안 | AI |
 | 자동화 | Make 시나리오 ([`automation/make_scenario.json`](../automation/make_scenario.json)) | 시트 기록, 메일 발송 | 화면·배포 |

@@ -5,6 +5,7 @@ import {
   ChevronDown, ClipboardCheck, Compass, Mail, MapPin, Search, ShieldCheck, Store,
   User, Utensils, WandSparkles, X
 } from "lucide-react";
+import { ReportHero, ReportOverview } from "./ReportDashboard.jsx";
 import "./styles.css";
 
 // ---------- 결과 리포트 계산 (화면 담당과 현장 논의, 10/31) ----------
@@ -243,7 +244,6 @@ menu: ""
   const report = diagnosisResult || {};
   const summary = report.summary || {};
   const mention = summary.mention || {};
-  const answers = report.answers || [];
   const rows = questionRows(report);
 
   // 사장님 의견 팝업: 리포트 맨 아래(결과 메일과 안내)까지 보면 한 번만 열림
@@ -452,51 +452,9 @@ menu: ""
         </>
       ) : (
         <main className="result-page">
-          <div className="result-topline">
-            <span className="result-pill"><WandSparkles size={14} /> AI 점검 리포트</span>
-            <span>AI가 생성한 추정치입니다</span>
-          </div>
-          <div className="result-header">
-            <div className="result-symbol"><BarChart3 size={28} /></div>
-            <h1>{report.input?.store || form.storeName} <span>AI 점검 리포트</span></h1>
-          </div>
-
-          {/* 2. 핵심 숫자 */}
-          <div className="result-cards">
-            <div className="metric-card">
-              <span>AI 답변 속 우리 가게 언급률</span>
-              <strong>{mention.rate ?? "—"}<span>%</span></strong>
-              <small>정상 답변 {mention.valid ?? 0}개 중 {mention.mentioned ?? 0}개에서 언급</small>
-            </div>
-            <div className="metric-card">
-              <span>언급될 때 평균 순위</span>
-              <strong>{summary.rank?.average ?? "—"}<span>{summary.rank?.average != null ? "위" : ""}</span></strong>
-              <small>{summary.rank?.counted ? `여러 가게를 나열한 답변 ${summary.rank.counted}개 기준, 1위 ${summary.rank.first_place}번` : "여러 가게를 나열한 답변에서 순위를 셀 수 없음"}</small>
-            </div>
-            <div className="metric-card">
-              <span>받은 AI 답변</span>
-              <strong>{mention.valid ?? 0}<span>개</span></strong>
-              <small>전체 {answers.length}개 중 정상 답변 (실패·빈 답변은 언급률에서 제외)</small>
-            </div>
-          </div>
-          {summary.low_reliability && (
-            <div className="demo-alert" role="note">
-              <CircleHelp size={20} />
-              <div><strong>신뢰도 낮음</strong><p>정상적으로 받은 AI 답변이 충분하지 않아 결과가 실제와 다를 수 있어요. 참고 자료로만 봐 주세요.</p></div>
-            </div>
-          )}
-
-          {/* 3. 질문 유형별 */}
-          <section className="result-section">
-            <div className="result-section-title"><h2>질문 유형별 결과</h2><span>손님이 어떻게 물을 때 나오나요</span></div>
-            {Object.entries(summary.by_type || {}).map(([type, v]) => (
-              <div className="type-row" key={type}>
-                <strong>{type}</strong>
-                <div className="type-bar"><div style={{ width: `${v.rate ?? 0}%` }} /></div>
-                <span>{v.valid ? `${v.valid}개 중 ${v.mentioned ?? 0}개` : "측정 불가"}</span>
-              </div>
-            ))}
-          </section>
+          {/* 1~2. 요약 띠 + 한눈에 보기 (리포트 개편 단위 2: ReportDashboard.jsx) */}
+          <ReportHero report={report} />
+          <ReportOverview report={report} rows={rows} />
 
           {/* 4. 질문별 결과 + AI 답변 원문 */}
           <section className="result-section">
