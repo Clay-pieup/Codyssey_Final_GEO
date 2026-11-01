@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import {
   ArrowRight, BarChart3, Bot, CheckCircle2, ChevronRight,
   ClipboardCheck, Compass, Mail, MapPin, Search, ShieldCheck, Store,
-  Utensils, WandSparkles, X
+  Utensils, X
 } from "lucide-react";
 import { ReportHero, ReportOverview } from "./ReportDashboard.jsx";
 import { ReportSuggestions } from "./ReportSuggestions.jsx";
@@ -350,7 +350,6 @@ menu: ""
           <main>
             <section className="hero">
               <div className="hero-copy">
-                <div className="eyebrow"><WandSparkles size={15} /> GENERATIVE ENGINE OPTIMIZATION</div>
                 <h1>AI가 우리 가게를<br /><span>추천하고 있을까요?</span></h1>
                 <p className="hero-desc">
                   가게 정보를 입력하면 AI 검색 답변에서의 브랜드 노출을 진단하고,
@@ -368,7 +367,6 @@ menu: ""
                 <div className="visual-card visual-main">
                   <div className="visual-icon"><Bot size={27} /></div>
                   <div>
-                    <div className="visual-label">AI DISCOVERY</div>
                     <strong>우리 가게는 발견되고 있나요?</strong>
                   </div>
                 </div>
@@ -380,7 +378,6 @@ menu: ""
 
             <section className="content-grid">
               <div className="intro-column">
-                <div className="section-kicker">START YOUR CHECKUP</div>
                 <h2>우리 가게 정보 입력</h2>
                 <p className="section-desc">매장 정보를 입력해 주세요.<br />진단이 끝난 뒤 리포트 아래에서 의견을 남겨 주시면, 리포트를 메일로 보내 드려요.</p>
                 <div className="privacy-note">
@@ -396,7 +393,7 @@ menu: ""
 
               <form className="form-card" onSubmit={startDiagnosis} noValidate>
                 <div className="form-heading">
-                  <div><span className="form-step">STEP 01</span><h3>매장 기본 정보</h3></div>
+                  <h3>매장 기본 정보</h3>
                   <span className="required-note">* 필수 입력</span>
                 </div>
                 <label htmlFor="storeName">가게 이름 <span>*</span></label>
