@@ -186,7 +186,7 @@ menu: ""
   setFeedbackResult(null);
   setFeedbackError("");
   setFeedbackOpen(false);
-  setQuickAnswered(false);
+  setQuickOpen(false);
   setMailSentTo("");
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
@@ -233,33 +233,37 @@ menu: ""
   const report = diagnosisResult || {};
   const rows = questionRows(report);
 
-  // 사장님 의견 팝업: 리포트 맨 아래(결과 메일과 안내)까지 보면 한 번만 열림
+  // 사장님 의견 팝업(5문항): 맨 아래 [의견 남기고 리포트 받기] 버튼으로 열림
+  // (11/1까지는 리포트 끝에서 저절로 열렸지만, 중간 팝업에서 모두 한 번 답하게 되면서 저절로 열기는 뺌)
   const [feedback, setFeedback] = useState(EMPTY_FEEDBACK);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackState, setFeedbackState] = useState("idle"); // idle → sending → done
   const [feedbackError, setFeedbackError] = useState("");
   const [feedbackResult, setFeedbackResult] = useState(null); // 서버 응답 (메일 발송 성공 여부)
-  // 리포트 중간 "한 줄 질문" (11/1): 답했으면 맨 아래 팝업은 저절로 안 뜸, 메일을 보냈으면 팝업에서 이메일을 다시 안 물음
-  const [quickAnswered, setQuickAnswered] = useState(false);
-  const [mailSentTo, setMailSentTo] = useState("");
-  const quickAnsweredRef = useRef(false);   // 아래 "리포트 끝 지켜보기"는 처음 한 번 만든 함수라, 최신 값은 ref로 읽음
-  quickAnsweredRef.current = quickAnswered;
-  // 리포트를 메일로 보낸 곳 (한 줄 질문에서 보냈거나, 팝업에서 보냈거나)
+  // 리포트 중간 팝업 "한 줄 질문 + 메일 보관" (ReportQuickAsk.jsx, 11/1 팀장 결정 ①)
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [mailSentTo, setMailSentTo] = useState("");   // 메일을 보냈으면 5문항 팝업에서 이메일을 다시 안 물음
+  // 리포트를 메일로 보낸 곳 (중간 팝업에서 보냈거나, 5문항 팝업에서 보냈거나)
   const sentTo = mailSentTo || (feedbackState === "done" && feedbackResult?.mail_sent ? feedback.email.trim() : "");
-  const reportEndRef = useRef(null);
+  const quickSpotRef = useRef(null);   // "한눈에 보기"가 끝나는 자리 (화면에는 안 보이는 표시)
 
-  // 진단할 때마다 한 번: 새 결과가 나오면(showResult가 true로 바뀌면) 리포트 끝을 새로 지켜봄 (10/31 팀장 결정, 전에는 브라우저당 한 번)
+  // 진단할 때마다 한 번: 사장님이 아래로 내리다가 "한눈에 보기" 끝이 화면 위쪽 60% 안으로 올라오면 중간 팝업을 띄움
   useEffect(() => {
-    if (!showResult || !reportEndRef.current) return undefined;
-    // 화면에 리포트 끝이 보이는 순간을 알려 주는 브라우저 기능 (스크롤 위치를 계속 계산하지 않아도 됨)
-    const observer = new IntersectionObserver((entries) => {
-      if (entries.some((entry) => entry.isIntersecting)) {
-        if (!quickAnsweredRef.current) openFeedback();   // 한 줄 질문에 이미 답했으면 두 번 묻지 않음
-        observer.disconnect(); // 같은 진단에서는 닫은 뒤 다시 스크롤해도 안 열림 (버튼으로는 열 수 있음)
+    if (!showResult) return undefined;
+    let lastY = window.scrollY;
+    const check = () => {
+      const goingDown = window.scrollY > lastY;
+      lastY = window.scrollY;
+      const spot = quickSpotRef.current;
+      // 아래로 내릴 때만 봄: 결과가 뜰 때 화면이 맨 위로 올라가는 움직임에는 반응하지 않음
+      if (!goingDown || !spot) return;
+      if (spot.getBoundingClientRect().top < window.innerHeight * 0.6) {
+        setQuickOpen(true);
+        window.removeEventListener("scroll", check);   // 같은 진단에서는 한 번만
       }
-    }, { threshold: 0.6 });
-    observer.observe(reportEndRef.current);
-    return () => observer.disconnect();
+    };
+    window.addEventListener("scroll", check, { passive: true });
+    return () => window.removeEventListener("scroll", check);
   }, [showResult]);
 
   const pickFeedback = (key, value) => {
@@ -449,9 +453,9 @@ menu: ""
           <ReportHero report={report} />
           <ReportOverview report={report} rows={rows} />
 
-          {/* 2-1. 한 줄 질문 + 메일 보관 (ReportQuickAsk.jsx, 11/1). 새 진단이면 key가 바뀌어 처음 상태로 */}
-          <ReportQuickAsk report={report} key={report.input?.store + (report.answers || []).length} mailSentTo={mailSentTo}
-            onAnswered={() => setQuickAnswered(true)} onMailSent={setMailSentTo} onMore={openFeedback} />
+          {/* 2-1. 중간 팝업 자리 표시 (화면에는 안 보임). 여기까지 내려오면 한 줄 질문 + 메일 보관 팝업 (ReportQuickAsk.jsx) */}
+          <div ref={quickSpotRef} aria-hidden="true" />
+          {quickOpen && <ReportQuickAsk report={report} mailSentTo={mailSentTo} onMailSent={setMailSentTo} onClose={() => setQuickOpen(false)} />}
 
           {/* 3. 질문별 AI 답변 (리포트 개편 단위 4: ReportQuestions.jsx). "소개한 말"·"함께 나온 가게" 칸은 한눈에 보기 카드로 옮김 */}
           <ReportQuestions report={report} rows={rows} key={report.input?.store + (report.answers || []).length} />
@@ -463,7 +467,7 @@ menu: ""
           <ReportSuggestions report={report} key={(report.suggestions || []).map((s) => s.title).join("|")} />
 
           {/* 9. 결과 메일 + 안내 */}
-          <section className="result-section" ref={reportEndRef}>
+          <section className="result-section">
             <div className="result-section-title"><h2>결과 메일과 안내</h2></div>
             <p className="muted">
               <Mail size={14} />{" "}
@@ -471,7 +475,7 @@ menu: ""
                 ? `리포트를 ${sentTo}(으)로 보냈어요. 몇 분 안에 도착해요.`
                 : feedbackState === "done"
                   ? "의견은 잘 받았어요. 다만 리포트 메일을 보내지 못했어요. 이 화면을 저장해 두세요."
-                  : "이 화면을 닫으면 결과가 사라져요. 위 한 줄 질문이나 [의견 남기고 리포트 받기]로 리포트를 메일로 보관해 두세요."}
+                  : "이 화면을 닫으면 결과가 사라져요. [의견 남기고 리포트 받기]로 리포트를 메일로 보관해 두세요."}
             </p>
             {report.notice && <p className="muted">{report.notice}</p>}
           </section>
