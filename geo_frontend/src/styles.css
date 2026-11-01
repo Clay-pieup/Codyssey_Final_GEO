@@ -330,3 +330,31 @@ footer { display:flex; justify-content:space-between; align-items:center; gap:12
   .ra-cta { grid-template-columns:1fr; padding:22px; }
   .ra-btn { justify-content:center; }
 }
+
+/* ---------- 결과 리포트: 한 줄 질문 + 메일 보관 (11/1, ReportQuickAsk.jsx) ---------- */
+.rp-keep { display:inline-block; margin:18px 0 0; padding:7px 12px; color:#5341c9; background:#ebe8ff; border-radius:12px; font-size:12px; font-weight:700; line-height:1.6; }
+.qa { display:flex; flex-direction:column; gap:10px; margin:-28px 0 56px; padding:26px 28px; background:#ebe8ff; border-radius:24px; }
+.qa-kicker { display:flex; align-items:center; gap:6px; margin:0; color:#5341c9; font-size:13px; font-weight:800; }
+.qa h3 { margin:0; color:#191f28; font-size:21px; font-weight:800; line-height:1.4; letter-spacing:-.5px; word-break:keep-all; }
+.qa-hint { margin:0; color:#4e5968; font-size:13px; line-height:1.6; }
+.qa-options { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+.qa-option { min-width:96px; padding:13px 18px; border:0; border-radius:14px; color:#191f28; background:white; font:inherit; font-size:15px; font-weight:800; cursor:pointer; box-shadow:0 1px 2px #0000000d; }
+.qa-option:hover { color:#5341c9; }
+.qa-option.on { color:white; background:#6655db; }
+.qa-option:disabled { cursor:wait; }
+.qa-note { margin:2px 0 0; color:#8b95a1; font-size:11px; }
+.qa-form { display:grid; grid-template-columns:minmax(0,3fr) minmax(0,2fr); gap:8px; margin-top:6px; }
+.qa-form .input-wrap { background:white; }
+.qa-consent { display:flex; align-items:flex-start; gap:8px; color:#4e5968; font-size:11px; line-height:1.6; cursor:pointer; }
+.qa-consent input { flex-shrink:0; width:17px; height:17px; margin-top:1px; accent-color:#6655db; }
+.qa-consent b { color:#191f28; }
+.qa-send { align-self:flex-start; padding:13px 22px; border:0; border-radius:12px; color:white; background:#6655db; font:inherit; font-size:14px; font-weight:800; cursor:pointer; }
+.qa-send:disabled { opacity:.6; cursor:wait; }
+.qa-more { align-self:flex-start; padding:4px 0; border:0; background:none; color:#5341c9; font:inherit; font-size:13px; font-weight:700; text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
+.qa-option:focus-visible, .qa-send:focus-visible, .qa-more:focus-visible, .qa-consent input:focus-visible { outline:2px solid #191f28; outline-offset:2px; }
+@media (max-width: 760px) {
+  .qa { padding:22px 20px; }
+  .qa h3 { font-size:19px; }
+  .qa-options { display:grid; grid-template-columns:1fr; }
+  .qa-form { grid-template-columns:1fr; }
+}

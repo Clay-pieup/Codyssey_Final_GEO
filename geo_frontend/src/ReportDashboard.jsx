@@ -111,6 +111,7 @@ export function ReportHero({ report }) {
       {summary.low_reliability && (
         <p className="rp-warn"><b>신뢰도 낮음</b> · 정상적으로 받은 AI 답변이 충분하지 않아 결과가 실제와 다를 수 있어요. 참고 자료로만 봐 주세요.</p>
       )}
+      <p className="rp-keep">이 리포트는 저장되지 않아요. 창을 닫으면 사라지니 아래 한 줄 질문에 답하고 메일로 보관해 두세요.</p>
       <p className="rp-note">{report.notice || "AI가 생성한 추정치입니다."}</p>
     </section>
   );

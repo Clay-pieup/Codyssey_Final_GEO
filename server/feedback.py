@@ -2,6 +2,8 @@
 
 근거: docs/ARCHITECTURE.md 5장 (POST /api/feedback), 진행 기록 10/31 (피드백 팝업 결정)
 - 문항은 리포트 영역(결과 이해, AI가 소개한 말, 함께 나온 가게, 개선 제안)에 맞춘 5개
+- 11/1 "한 줄 질문": 리포트 중간 카드에서 위 문항 중 하나(AI가 소개한 말 → 없으면 함께 나온 가게 → 없으면 개선 제안)만
+  탭 한 번으로 받는다 (quick=True). 같은 칸을 쓰므로 피드백 시트(Apps Script)는 고치지 않는다
 - 의견 시트에는 이름·이메일을 넣지 않는다 (진단결과·연락처 시트를 나눈 것과 같은 원칙). 이름·이메일은 리포트 메일 발송(Make)에만 쓴다
 - 저장 주소(FEEDBACK_WEBHOOK_URL)는 구글 Apps Script 웹 앱(automation/feedback_sheet.gs). 시트에 적으면 "ok"라고 답한다
 - 저장 성공은 그 "ok" 답을 받았을 때만 (10/31: 구글 로그인 화면이 대신 열려도 성공으로 착각하던 문제 수정)
@@ -39,23 +41,31 @@ def check_name(value) -> str:
     return _short_text(value, MAX_NAME) if isinstance(value, str) and value.strip() else ""
 
 
-def check_feedback(data: dict, report: dict) -> tuple[dict | None, list[str]]:
-    """화면이 보낸 의견을 확인한다. 통과하면 (저장할 값, []), 아니면 (None, 문제 목록)."""
+def check_feedback(data: dict, report: dict, quick: bool = False) -> tuple[dict | None, list[str]]:
+    """화면이 보낸 의견을 확인한다. 통과하면 (저장할 값, []), 아니면 (None, 문제 목록).
+
+    quick=True (한 줄 질문): 보기 문항 3개 중 딱 하나만 답이 오면 통과. 나머지 칸과 결과 이해도는 빈칸으로 저장
+    """
     problems = []
     clean = {}
 
     clarity = data.get("clarity")
     # True/False도 숫자로 취급되는 파이썬 특성 때문에 bool은 따로 막는다
-    if not (isinstance(clarity, int) and not isinstance(clarity, bool) and 1 <= clarity <= 5):
+    clarity_ok = isinstance(clarity, int) and not isinstance(clarity, bool) and 1 <= clarity <= 5
+    if not clarity_ok and not quick:
         problems.append("clarity: 1~5 중에서 골라 주세요")
-        clarity = None
-    clean["clarity"] = clarity
+    clean["clarity"] = clarity if clarity_ok and not quick else ""
 
+    answered = 0
     for key, options in CHOICES.items():
         value = data.get(key)
-        if value not in options:
-            problems.append(f"{key}: 보기 중에서 골라 주세요")
+        if value in options:
+            answered += 1
+        elif not quick or value not in (None, ""):
+            problems.append(f"{key}: 보기 중에서 골라 주세요")   # 한 줄 질문이어도 이상한 값이 오면 막음
         clean[key] = value if value in options else ""
+    if quick and answered != 1:
+        problems.append("한 줄 질문은 답 하나만 보내 주세요")
 
     clean["comment"] = _short_text(data.get("comment"), MAX_COMMENT)
 

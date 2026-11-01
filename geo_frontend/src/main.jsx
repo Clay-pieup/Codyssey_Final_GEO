@@ -9,6 +9,7 @@ import { ReportHero, ReportOverview } from "./ReportDashboard.jsx";
 import { ReportSuggestions } from "./ReportSuggestions.jsx";
 import { ReportQuestions } from "./ReportQuestions.jsx";
 import { ReportAgent } from "./ReportAgent.jsx";
+import { ReportQuickAsk } from "./ReportQuickAsk.jsx";
 import "./styles.css";
 
 // ---------- 사장님 의견 팝업 (피드백, 10/31 화면 담당과 현장 논의) ----------
@@ -184,6 +185,8 @@ menu: ""
   setFeedbackResult(null);
   setFeedbackError("");
   setFeedbackOpen(false);
+  setQuickAnswered(false);
+  setMailSentTo("");
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
@@ -235,6 +238,13 @@ menu: ""
   const [feedbackState, setFeedbackState] = useState("idle"); // idle → sending → done
   const [feedbackError, setFeedbackError] = useState("");
   const [feedbackResult, setFeedbackResult] = useState(null); // 서버 응답 (메일 발송 성공 여부)
+  // 리포트 중간 "한 줄 질문" (11/1): 답했으면 맨 아래 팝업은 저절로 안 뜸, 메일을 보냈으면 팝업에서 이메일을 다시 안 물음
+  const [quickAnswered, setQuickAnswered] = useState(false);
+  const [mailSentTo, setMailSentTo] = useState("");
+  const quickAnsweredRef = useRef(false);   // 아래 "리포트 끝 지켜보기"는 처음 한 번 만든 함수라, 최신 값은 ref로 읽음
+  quickAnsweredRef.current = quickAnswered;
+  // 리포트를 메일로 보낸 곳 (한 줄 질문에서 보냈거나, 팝업에서 보냈거나)
+  const sentTo = mailSentTo || (feedbackState === "done" && feedbackResult?.mail_sent ? feedback.email.trim() : "");
   const reportEndRef = useRef(null);
 
   // 진단할 때마다 한 번: 새 결과가 나오면(showResult가 true로 바뀌면) 리포트 끝을 새로 지켜봄 (10/31 팀장 결정, 전에는 브라우저당 한 번)
@@ -243,7 +253,7 @@ menu: ""
     // 화면에 리포트 끝이 보이는 순간을 알려 주는 브라우저 기능 (스크롤 위치를 계속 계산하지 않아도 됨)
     const observer = new IntersectionObserver((entries) => {
       if (entries.some((entry) => entry.isIntersecting)) {
-        openFeedback();
+        if (!quickAnsweredRef.current) openFeedback();   // 한 줄 질문에 이미 답했으면 두 번 묻지 않음
         observer.disconnect(); // 같은 진단에서는 닫은 뒤 다시 스크롤해도 안 열림 (버튼으로는 열 수 있음)
       }
     }, { threshold: 0.6 });
@@ -263,15 +273,11 @@ menu: ""
       setFeedbackError("1~4번 문항을 모두 골라 주세요.");
       return;
     }
-    if (!feedback.name.trim()) {
-      setFeedbackError("이름을 입력해 주세요.");
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(feedback.email.trim())) {
+    if (!mailSentTo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(feedback.email.trim())) {
       setFeedbackError("이메일 주소를 확인해 주세요.");
       return;
     }
-    if (!feedback.consent) {
+    if (!mailSentTo && !feedback.consent) {
       setFeedbackError("리포트를 메일로 받으려면 개인정보 수집·이용에 동의해 주세요.");
       return;
     }
@@ -282,7 +288,8 @@ menu: ""
         method: "POST",
         headers: { "Content-Type": "application/json" },
         // 서버는 진단을 기억하지 못해서 리포트를 통째로 다시 보냄 (리포트 메일 발송에 필요)
-        body: JSON.stringify({ ...feedback, email: feedback.email.trim(), name: feedback.name.trim(), report }),
+        // 한 줄 질문에서 이미 메일을 보냈으면 이메일 없이 의견만 (메일 두 번 안 감)
+        body: JSON.stringify({ ...feedback, mode: "full", email: mailSentTo ? "" : feedback.email.trim(), consent: mailSentTo ? false : feedback.consent, name: feedback.name.trim(), report }),
       });
       const data = await response.json();
       if (!data.ok) {
@@ -439,6 +446,10 @@ menu: ""
           <ReportHero report={report} />
           <ReportOverview report={report} rows={rows} />
 
+          {/* 2-1. 한 줄 질문 + 메일 보관 (ReportQuickAsk.jsx, 11/1). 새 진단이면 key가 바뀌어 처음 상태로 */}
+          <ReportQuickAsk report={report} key={report.input?.store + (report.answers || []).length} mailSentTo={mailSentTo}
+            onAnswered={() => setQuickAnswered(true)} onMailSent={setMailSentTo} onMore={openFeedback} />
+
           {/* 3. 질문별 AI 답변 (리포트 개편 단위 4: ReportQuestions.jsx). "소개한 말"·"함께 나온 가게" 칸은 한눈에 보기 카드로 옮김 */}
           <ReportQuestions report={report} rows={rows} key={report.input?.store + (report.answers || []).length} />
 
@@ -453,11 +464,11 @@ menu: ""
             <div className="result-section-title"><h2>결과 메일과 안내</h2></div>
             <p className="muted">
               <Mail size={14} />{" "}
-              {feedbackState === "done"
-                ? feedbackResult?.mail_sent
-                  ? `리포트를 ${feedback.email.trim()}(으)로 보냈어요. 몇 분 안에 도착해요.`
-                  : "리포트 메일을 보내지 못했어요. 이 화면을 저장해 두세요."
-                : "아래 [의견 남기고 리포트 받기]로 의견을 남겨 주시면 이 리포트를 메일로 보내 드려요."}
+              {sentTo
+                ? `리포트를 ${sentTo}(으)로 보냈어요. 몇 분 안에 도착해요.`
+                : feedbackState === "done"
+                  ? "의견은 잘 받았어요. 다만 리포트 메일을 보내지 못했어요. 이 화면을 저장해 두세요."
+                  : "이 화면을 닫으면 결과가 사라져요. 위 한 줄 질문이나 [의견 남기고 리포트 받기]로 리포트를 메일로 보관해 두세요."}
             </p>
             {report.notice && <p className="muted">{report.notice}</p>}
           </section>
@@ -466,7 +477,7 @@ menu: ""
             <button className="secondary-button" onClick={reset}>입력 화면으로 돌아가기</button>
             {/* [더 자세히 진단하기]는 "AI 추가 진단" 칸으로 옮김 → 맨 아래 주 버튼은 의견 남기기 */}
             <button className={feedbackState === "done" ? "secondary-button" : "submit-button"} onClick={openFeedback} disabled={feedbackState === "done"}>
-              {feedbackState === "done" ? "의견 고맙습니다" : "의견 남기고 리포트 받기"}
+              {feedbackState === "done" ? "의견 고맙습니다" : mailSentTo ? "의견 더 남기기" : "의견 남기고 리포트 받기"}
             </button>
           </div>
           {feedbackOpen && (
@@ -480,13 +491,15 @@ menu: ""
                     <p>
                       {feedbackResult?.mail_sent
                         ? `리포트를 ${feedback.email.trim()}(으)로 보냈어요. 몇 분 안에 도착해요.`
-                        : "의견은 잘 받았어요. 다만 리포트 메일을 보내지 못했어요. 이 화면을 저장해 두세요."}
+                        : mailSentTo
+                          ? `의견 고마워요! 리포트는 이미 ${mailSentTo}(으)로 보냈어요.`
+                          : "의견은 잘 받았어요. 다만 리포트 메일을 보내지 못했어요. 이 화면을 저장해 두세요."}
                     </p>
                     <button className="submit-button" onClick={() => setFeedbackOpen(false)}>닫기</button>
                   </div>
                 ) : (
                   <>
-                    <h3 id="feedback-title">사장님 의견을 들려주시면 리포트를 메일로 발송해드립니다.</h3>
+                    <h3 id="feedback-title">{mailSentTo ? "리포트 메일은 보냈어요. 의견을 조금 더 들려주세요." : "사장님 의견을 들려주시면 리포트를 메일로 발송해드립니다."}</h3>
                     <p className="feedback-note">리포트를 보신 그대로 답해 주세요. 5문항(1~4번 필수), 1분이면 끝나요.</p>
                     <Choice label="1. 진단 결과(언급률·질문별 결과)를 이해하기 쉬웠나요?" options={[1, 2, 3, 4, 5]} value={feedback.clarity} onPick={(v) => pickFeedback("clarity", v)} hint="1 어려웠어요 · 5 쉬웠어요" />
                     <Choice label="2. 'AI가 우리 가게를 소개한 말'이 실제 가게와 맞았나요?" options={["맞음", "일부 맞음", "틀림", "소개 없음"]} value={feedback.accuracy} onPick={(v) => pickFeedback("accuracy", v)} />
@@ -497,9 +510,12 @@ menu: ""
                       <textarea value={feedback.comment} maxLength={300} placeholder="자유롭게 적어 주세요" onChange={(e) => pickFeedback("comment", e.target.value)} />
                     </fieldset>
 
+                    {mailSentTo ? (
+                      <p className="feedback-note">리포트는 이미 {mailSentTo}(으)로 보냈어요. 이메일은 다시 적지 않아도 돼요.</p>
+                    ) : (
                     <div className="feedback-contact">
                       <strong>리포트 받을 정보</strong>
-                      <label htmlFor="fb-name">이름 <span>*</span></label>
+                      <label htmlFor="fb-name">이름 (선택)</label>
                       <div className="input-wrap"><User size={16} /><input id="fb-name" value={feedback.name} maxLength={20} placeholder="예: 홍길동" onChange={(e) => pickFeedback("name", e.target.value)} /></div>
                       <label htmlFor="fb-email">이메일 <span>*</span></label>
                       <div className="input-wrap"><Mail size={16} /><input id="fb-email" type="email" value={feedback.email} maxLength={254} placeholder="name@example.com" onChange={(e) => pickFeedback("email", e.target.value)} /></div>
@@ -509,17 +525,18 @@ menu: ""
                           <span className="custom-checkbox"><CheckCircle2 size={15} /></span>
                           <span>
                             <strong>[필수] 아래 내용을 확인했으며, 개인정보 수집·이용에 동의합니다.</strong>
-                            <small>수집 항목: 이름, 이메일 · 이용 목적: 진단 리포트 메일 발송과 보내 주신 의견 확인 · 보유 기간: 2026년 11월 24일까지(이후 파기) · 동의하지 않으셔도 진단 결과는 화면에서 볼 수 있지만, 리포트 메일은 받을 수 없어요.</small>
+                            <small>수집 항목: 이메일, 이름(선택) · 이용 목적: 진단 리포트 메일 발송과 보내 주신 의견 확인 · 보유 기간: 2026년 11월 24일까지(이후 파기) · 동의하지 않으셔도 진단 결과는 화면에서 볼 수 있지만, 리포트 메일은 받을 수 없어요.</small>
                           </span>
                         </label>
                       </div>
                     </div>
+                    )}
 
                     {feedbackError && <p className="error-message">{feedbackError}</p>}
                     <div className="feedback-actions">
                       <button className="secondary-button" onClick={() => setFeedbackOpen(false)}>나중에 할게요</button>
                       <button className="submit-button" onClick={sendFeedback} disabled={feedbackState === "sending"}>
-                        {feedbackState === "sending" ? "보내는 중…" : "의견 보내고 리포트 받기"}
+                        {feedbackState === "sending" ? "보내는 중…" : mailSentTo ? "의견 보내기" : "의견 보내고 리포트 받기"}
                       </button>
                     </div>
                   </>
