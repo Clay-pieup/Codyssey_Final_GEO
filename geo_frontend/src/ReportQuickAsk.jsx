@@ -2,6 +2,7 @@
 // 1) 피드백 전략 1 + 3 혼합: 한 가지만 묻고(탭 한 번 → 피드백 시트), 이어서 "메일로 보관할까요?"(이메일·동의 → 리포트 메일)
 // 2) 같은 날 변경 ①: 리포트 안 카드는 눌러 보는 건지 몰라서 → "한눈에 보기"를 지나 내려가면 팝업으로 띄우고,
 //    리포트를 이어 보려면 탭 한 번 답이 필수. 이메일은 선택으로 둠 (개인정보를 안 준다고 결과를 막지 않음, 개인정보 보호법 제16조)
+// 3) 같은 날 변경 ㉠: 메일을 보낸 사장님에게만 [나머지 의견 남기기]를 권함 → 5문항 팝업(main.jsx)이 방금 답한 문항을 빼고 열림
 // 묻는 칸은 맨 아래 5문항 팝업과 같은 칸을 써서 피드백 시트(Apps Script)는 고치지 않는다
 import React, { useEffect, useState } from "react";
 import { CheckCircle2, Mail, X } from "lucide-react";
@@ -27,7 +28,7 @@ function questionOf(report) {
     options: [["있어요", "있음"], ["없어요", "없음"]] };
 }
 
-export function ReportQuickAsk({ report, mailSentTo, onMailSent, onClose }) {
+export function ReportQuickAsk({ report, mailSentTo, onAnswered, onMailSent, onMore, onClose }) {
   const question = questionOf(report);
   const [picked, setPicked] = useState(null);       // 고른 보기 (화면 글자)
   const [step, setStep] = useState("ask");          // ask → sending → keep(메일 보관 묻기) → mailing
@@ -58,6 +59,7 @@ export function ReportQuickAsk({ report, mailSentTo, onMailSent, onClose }) {
     } catch {
       // 저장에 실패해도 사장님 흐름은 막지 않음 (실패 이유는 서버 로그 "[feedback]"에 남음)
     }
+    onAnswered(question.field, value);   // 5문항 팝업이 이 문항을 다시 묻지 않게 알려 줌
     setStep("keep");
   };
 
@@ -98,12 +100,19 @@ export function ReportQuickAsk({ report, mailSentTo, onMailSent, onClose }) {
             <p className="qa-note">탭 한 번 답하시면 리포트를 이어서 볼 수 있어요. 보내 주신 답은 서비스 개선에만 써요.</p>
           </>
         ) : mailSentTo ? (
-          // 메일까지 보낸 뒤
+          // 메일까지 보낸 뒤: 메일을 준 사장님에게만 나머지 의견을 권함 (11/1 팀장 결정 ㉠)
           <>
             <p className="qa-kicker"><CheckCircle2 size={15} /> 메일로 보냈어요</p>
             <h3 id="qa-title">리포트를 {mailSentTo}(으)로 보냈어요</h3>
             <p className="qa-hint">몇 분 안에 도착해요. 메일이 안 보이면 스팸함도 확인해 주세요.</p>
-            <button type="button" className="qa-send" onClick={onClose}>리포트 계속 보기</button>
+            <div className="qa-more-box">
+              <strong>1분만 더 도와주실래요?</strong>
+              <span>방금 답하신 질문은 빼고, 나머지 3가지만 탭으로 여쭤볼게요. 서비스를 고치는 데 써요.</span>
+            </div>
+            <div className="qa-actions">
+              <button type="button" className="qa-send" onClick={onMore}>나머지 의견 남기기 (1분)</button>
+              <button type="button" className="qa-skip" onClick={onClose}>리포트 계속 보기</button>
+            </div>
           </>
         ) : (
           // 2단계: 메일로 보관 (선택)

@@ -354,6 +354,9 @@ footer { display:flex; justify-content:space-between; align-items:center; gap:12
 .qa-actions { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:4px; }
 .qa-skip { padding:13px 8px; border:0; background:none; color:#6b7684; font:inherit; font-size:13px; font-weight:700; cursor:pointer; }
 .qa-skip:disabled { opacity:.5; }
+.qa-more-box { display:flex; flex-direction:column; gap:4px; margin-top:6px; padding:14px 16px; background:#f2f1fb; border-radius:14px; }
+.qa-more-box strong { color:#191f28; font-size:14px; font-weight:800; }
+.qa-more-box span { color:#4e5968; font-size:12px; line-height:1.6; }
 .qa-option:focus-visible, .qa-send:focus-visible, .qa-skip:focus-visible, .qa-consent input:focus-visible { outline:2px solid #191f28; outline-offset:2px; }
 @media (max-width: 760px) {
   .qa { max-width:none; max-height:88vh; padding:24px 20px calc(24px + env(safe-area-inset-bottom)); border-radius:24px 24px 0 0; }

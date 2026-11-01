@@ -16,6 +16,14 @@ import "./styles.css";
 // ---------- 사장님 의견 팝업 (피드백, 10/31 화면 담당과 현장 논의) ----------
 const EMPTY_FEEDBACK = { clarity: 0, accuracy: "", competitors: "", useful: "", comment: "", email: "", consent: false };
 
+// 보기를 고르는 필수 문항. 중간 팝업에서 이미 답한 문항은 빼고 보여 주므로 번호는 화면에서 매김
+const FEEDBACK_CHOICES = [
+  { key: "clarity", label: "진단 결과(언급률·질문별 결과)를 이해하기 쉬웠나요?", options: [1, 2, 3, 4, 5], hint: "1 어려웠어요 · 5 쉬웠어요" },
+  { key: "accuracy", label: "'AI가 우리 가게를 소개한 말'이 실제 가게와 맞았나요?", options: ["맞음", "일부 맞음", "틀림", "소개 없음"] },
+  { key: "competitors", label: "'AI 답변에 함께 나온 가게'가 실제 경쟁 가게와 비슷했나요?", options: ["비슷해요", "일부 비슷해요", "달라요", "잘 모르겠어요"] },
+  { key: "useful", label: "'개선 제안' 중 실제로 해 볼 만한 것이 있었나요?", options: ["있음", "없음"] },
+];
+
 // 보기 중 하나를 고르는 문항 (버튼 묶음)
 function Choice({ label, options, value, onPick, hint }) {
   return (
@@ -187,6 +195,7 @@ menu: ""
   setFeedbackError("");
   setFeedbackOpen(false);
   setQuickOpen(false);
+  setQuickField("");
   setMailSentTo("");
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
@@ -242,6 +251,7 @@ menu: ""
   const [feedbackResult, setFeedbackResult] = useState(null); // 서버 응답 (메일 발송 성공 여부)
   // 리포트 중간 팝업 "한 줄 질문 + 메일 보관" (ReportQuickAsk.jsx, 11/1 팀장 결정 ①)
   const [quickOpen, setQuickOpen] = useState(false);
+  const [quickField, setQuickField] = useState("");   // 중간 팝업에서 답한 문항 → 5문항 팝업에서는 빼고 물음
   const [mailSentTo, setMailSentTo] = useState("");   // 메일을 보냈으면 5문항 팝업에서 이메일을 다시 안 물음
   // 리포트를 메일로 보낸 곳 (중간 팝업에서 보냈거나, 5문항 팝업에서 보냈거나)
   const sentTo = mailSentTo || (feedbackState === "done" && feedbackResult?.mail_sent ? feedback.email.trim() : "");
@@ -273,9 +283,21 @@ menu: ""
 
   const openFeedback = () => setFeedbackOpen(true);
 
+  // 중간 팝업에서 답하면: 그 답을 5문항 의견에도 미리 넣어 둠 (서버에는 4문항이 모두 채워진 한 줄로 감)
+  const rememberQuick = (field, value) => {
+    setQuickField(field);
+    pickFeedback(field, value);
+  };
+  // 메일을 보낸 사장님이 [나머지 의견 남기기]를 누르면: 중간 팝업을 닫고 5문항 팝업을 엶
+  const moreFromQuick = () => {
+    setQuickOpen(false);
+    openFeedback();
+  };
+  const shownChoices = FEEDBACK_CHOICES.filter((choice) => choice.key !== quickField);
+
   const sendFeedback = async () => {
-    if (!feedback.clarity || !feedback.accuracy || !feedback.competitors || !feedback.useful) {
-      setFeedbackError("1~4번 문항을 모두 골라 주세요.");
+    if (FEEDBACK_CHOICES.some((choice) => !feedback[choice.key])) {
+      setFeedbackError("보기를 고르는 문항에 모두 답해 주세요.");
       return;
     }
     if (!mailSentTo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(feedback.email.trim())) {
@@ -455,7 +477,7 @@ menu: ""
 
           {/* 2-1. 중간 팝업 자리 표시 (화면에는 안 보임). 여기까지 내려오면 한 줄 질문 + 메일 보관 팝업 (ReportQuickAsk.jsx) */}
           <div ref={quickSpotRef} aria-hidden="true" />
-          {quickOpen && <ReportQuickAsk report={report} mailSentTo={mailSentTo} onMailSent={setMailSentTo} onClose={() => setQuickOpen(false)} />}
+          {quickOpen && <ReportQuickAsk report={report} mailSentTo={mailSentTo} onAnswered={rememberQuick} onMailSent={setMailSentTo} onMore={moreFromQuick} onClose={() => setQuickOpen(false)} />}
 
           {/* 3. 질문별 AI 답변 (리포트 개편 단위 4: ReportQuestions.jsx). "소개한 말"·"함께 나온 가게" 칸은 한눈에 보기 카드로 옮김 */}
           <ReportQuestions report={report} rows={rows} key={report.input?.store + (report.answers || []).length} />
@@ -507,13 +529,15 @@ menu: ""
                 ) : (
                   <>
                     <h3 id="feedback-title">{mailSentTo ? "리포트 메일은 보냈어요. 의견을 조금 더 들려주세요." : "사장님 의견을 들려주시면 리포트를 메일로 발송해드립니다."}</h3>
-                    <p className="feedback-note">리포트를 보신 그대로 답해 주세요. 5문항(1~4번 필수), 1분이면 끝나요.</p>
-                    <Choice label="1. 진단 결과(언급률·질문별 결과)를 이해하기 쉬웠나요?" options={[1, 2, 3, 4, 5]} value={feedback.clarity} onPick={(v) => pickFeedback("clarity", v)} hint="1 어려웠어요 · 5 쉬웠어요" />
-                    <Choice label="2. 'AI가 우리 가게를 소개한 말'이 실제 가게와 맞았나요?" options={["맞음", "일부 맞음", "틀림", "소개 없음"]} value={feedback.accuracy} onPick={(v) => pickFeedback("accuracy", v)} />
-                    <Choice label="3. 'AI 답변에 함께 나온 가게'가 실제 경쟁 가게와 비슷했나요?" options={["비슷해요", "일부 비슷해요", "달라요", "잘 모르겠어요"]} value={feedback.competitors} onPick={(v) => pickFeedback("competitors", v)} />
-                    <Choice label="4. '개선 제안' 중 실제로 해 볼 만한 것이 있었나요?" options={["있음", "없음"]} value={feedback.useful} onPick={(v) => pickFeedback("useful", v)} />
+                    <p className="feedback-note">
+                      리포트를 보신 그대로 답해 주세요. {shownChoices.length + 1}문항({shownChoices.length}번까지 필수), 1분이면 끝나요.
+                      {quickField && " 앞에서 답해 주신 질문은 뺐어요."}
+                    </p>
+                    {shownChoices.map((choice, i) => (
+                      <Choice key={choice.key} label={`${i + 1}. ${choice.label}`} options={choice.options} value={feedback[choice.key]} onPick={(v) => pickFeedback(choice.key, v)} hint={choice.hint} />
+                    ))}
                     <fieldset className="feedback-field">
-                      <legend>5. 리포트에서 불편했거나 더 보고 싶은 내용 (선택)</legend>
+                      <legend>{shownChoices.length + 1}. 리포트에서 불편했거나 더 보고 싶은 내용 (선택)</legend>
                       <textarea value={feedback.comment} maxLength={300} placeholder="자유롭게 적어 주세요" onChange={(e) => pickFeedback("comment", e.target.value)} />
                     </fieldset>
 
