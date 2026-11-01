@@ -379,10 +379,10 @@ menu: ""
             <section className="content-grid">
               <div className="intro-column">
                 <h2>우리 가게 정보 입력</h2>
-                <p className="section-desc">매장 정보를 입력해 주세요.<br />진단이 끝난 뒤 리포트 아래에서 의견을 남겨 주시면, 리포트를 메일로 보내 드려요.</p>
+                <p className="section-desc">매장 정보를 입력해 주세요.<br />진단 결과는 화면에 바로 나오고, 원하시면 리포트를 메일로도 받아 볼 수 있어요.</p>
                 <div className="privacy-note">
                   <ShieldCheck size={20} />
-                  <div><strong>정보는 안전하게 관리합니다</strong><p>이름·이메일은 리포트를 메일로 받을 때만, 동의를 받은 뒤 사용합니다.</p></div>
+                  <div><strong>정보는 안전하게 관리합니다</strong><p>이메일은 리포트를 메일로 받을 때만, 동의를 받은 뒤 사용합니다.</p></div>
                 </div>
                 <div className="steps">
                   <div className="step-item"><span className="step-number">01</span><div><strong>매장 정보 입력</strong><p>상호 · 지역 · 대표 메뉴</p></div></div>
@@ -413,7 +413,7 @@ menu: ""
                     <Search size={16} /> {isSearching ? "검색 중…" : "검색"}
                   </button>
                 </div>
-                <p className="field-help">가게 이름과 동네를 함께 넣고 [검색]을 누르면 지역이 자동으로 채워집니다. 목록에 없으면 직접 입력해도 됩니다.</p>
+                <p className="field-help">가게 이름과 동네를 함께 넣고 [검색]을 누르면 지역과 대표 메뉴가 자동으로 채워집니다. 목록에 없으면 직접 입력해도 됩니다.</p>
                 {places.length > 0 && (
                   <ul className="place-list">
                     {places.map((place, index) => (
