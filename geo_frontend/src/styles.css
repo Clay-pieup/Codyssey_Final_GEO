@@ -358,3 +358,33 @@ footer { display:flex; justify-content:space-between; align-items:center; gap:12
   .qa-options { display:grid; grid-template-columns:1fr; }
   .qa-form { grid-template-columns:1fr; }
 }
+
+/* ---------- 진단 중 화면 (PRD S2, DiagnosisProgress.jsx) ---------- */
+.dp-overlay { position:fixed; inset:0; z-index:60; display:grid; place-items:center; padding:max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); background:#191f2866; backdrop-filter:blur(3px); }
+.dp-card { width:100%; max-width:460px; max-height:100%; overflow-y:auto; padding:28px; background:white; border-radius:24px; box-shadow:0 24px 60px #191f2833; }
+.dp-kicker { display:flex; align-items:center; gap:8px; margin:0; color:#5341c9; font-size:13px; font-weight:800; }
+.dp-pulse { width:9px; height:9px; border-radius:50%; background:#6655db; animation:dp-pulse 1.2s ease-in-out infinite; }
+@keyframes dp-pulse { 0%,100% { transform:scale(1); opacity:1; } 50% { transform:scale(1.6); opacity:.45; } }
+.dp-card h3 { margin:8px 0 18px; color:#191f28; font-size:21px; font-weight:800; line-height:1.4; letter-spacing:-.5px; word-break:keep-all; }
+.dp-bar { position:relative; height:10px; border-radius:5px; background:#f0eefb; overflow:hidden; }
+.dp-bar div { position:relative; height:100%; border-radius:5px; background:#6655db; transition:width .4s ease-out; overflow:hidden; }
+.dp-bar div::after { content:""; position:absolute; inset:0; background:linear-gradient(90deg, transparent, #ffffff66, transparent); animation:dp-shine 1.4s linear infinite; }
+@keyframes dp-shine { from { transform:translateX(-100%); } to { transform:translateX(100%); } }
+.dp-time { margin:8px 0 0; color:#8b95a1; font-size:12px; font-variant-numeric:tabular-nums; }
+.dp-steps { display:flex; flex-direction:column; gap:10px; margin:20px 0 0; padding:0; list-style:none; }
+.dp-steps li { display:flex; align-items:flex-start; gap:12px; color:#b0b8c1; font-size:14px; }
+.dp-steps li strong { display:block; font-weight:700; }
+.dp-steps li small { display:block; margin-top:2px; color:#8b95a1; font-size:12px; }
+.dp-mark { display:grid; place-items:center; flex-shrink:0; width:24px; height:24px; border-radius:50%; color:#b0b8c1; background:#f3f3f7; font-size:12px; font-weight:800; }
+.dp-steps li.done { color:#4e5968; }
+.dp-steps li.done .dp-mark { color:white; background:#00a661; }
+.dp-steps li.now { color:#191f28; }
+.dp-steps li.now .dp-mark { color:white; background:#6655db; animation:dp-pulse-ring 1.2s ease-out infinite; }
+@keyframes dp-pulse-ring { 0% { box-shadow:0 0 0 0 #6655db66; } 100% { box-shadow:0 0 0 10px #6655db00; } }
+.dp-tip { margin:20px 0 0; padding:12px 14px; color:#4e5968; background:#f4f3f8; border-radius:14px; font-size:13px; line-height:1.6; animation:dp-fade .5s ease-out; }
+@keyframes dp-fade { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+.dp-note { margin:12px 0 0; color:#b0b8c1; font-size:11px; }
+@media (prefers-reduced-motion: reduce) {
+  .dp-pulse, .dp-bar div::after, .dp-steps li.now .dp-mark, .dp-tip { animation:none; }
+  .dp-bar div { transition:none; }
+}

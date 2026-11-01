@@ -10,6 +10,7 @@ import { ReportSuggestions } from "./ReportSuggestions.jsx";
 import { ReportQuestions } from "./ReportQuestions.jsx";
 import { ReportAgent } from "./ReportAgent.jsx";
 import { ReportQuickAsk } from "./ReportQuickAsk.jsx";
+import { DiagnosisProgress } from "./DiagnosisProgress.jsx";
 import "./styles.css";
 
 // ---------- 사장님 의견 팝업 (피드백, 10/31 화면 담당과 현장 논의) ----------
@@ -438,6 +439,8 @@ menu: ""
               <div className="feature"><div className="feature-icon green"><ClipboardCheck size={21} /></div><div><strong>개선 방향 제안</strong><p>실행할 수 있는 다음 행동을 안내</p></div></div>
             </section>
           </main>
+          {/* 진단 중 화면 (DiagnosisProgress.jsx): 결과가 올 때까지 단계·진행 막대·지난 시간을 보여 줌 */}
+          {isDiagnosing && <DiagnosisProgress storeName={form.storeName.trim()} />}
           <footer><span>우리가게 AI 점검</span><span>GEO 진단 서비스 · 개발 중인 시제품</span></footer>
         </>
       ) : (
