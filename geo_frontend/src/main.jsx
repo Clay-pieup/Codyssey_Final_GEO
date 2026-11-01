@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import {
   ArrowRight, BarChart3, Bot, CheckCircle2, ChevronRight,
   ClipboardCheck, Compass, Mail, MapPin, Search, ShieldCheck, Store,
-  User, Utensils, WandSparkles, X
+  Utensils, WandSparkles, X
 } from "lucide-react";
 import { ReportHero, ReportOverview } from "./ReportDashboard.jsx";
 import { ReportSuggestions } from "./ReportSuggestions.jsx";
@@ -13,7 +13,7 @@ import { ReportQuickAsk } from "./ReportQuickAsk.jsx";
 import "./styles.css";
 
 // ---------- 사장님 의견 팝업 (피드백, 10/31 화면 담당과 현장 논의) ----------
-const EMPTY_FEEDBACK = { clarity: 0, accuracy: "", competitors: "", useful: "", comment: "", name: "", email: "", consent: false };
+const EMPTY_FEEDBACK = { clarity: 0, accuracy: "", competitors: "", useful: "", comment: "", email: "", consent: false };
 
 // 보기 중 하나를 고르는 문항 (버튼 묶음)
 function Choice({ label, options, value, onPick, hint }) {
@@ -179,8 +179,8 @@ menu: ""
   setDiagnosisResult(null);
   setError("");
   setMoreError("");
-  // 새 진단 = 새 리포트 → 의견 팝업도 처음 상태로. 이름·이메일은 다시 안 쓰게 남기고, 답과 동의는 다시 고름
-  setFeedback((old) => ({ ...EMPTY_FEEDBACK, name: old.name, email: old.email }));
+  // 새 진단 = 새 리포트 → 의견 팝업도 처음 상태로. 이메일은 다시 안 쓰게 남기고, 답과 동의는 다시 고름
+  setFeedback((old) => ({ ...EMPTY_FEEDBACK, email: old.email }));
   setFeedbackState("idle");
   setFeedbackResult(null);
   setFeedbackError("");
@@ -289,7 +289,7 @@ menu: ""
         headers: { "Content-Type": "application/json" },
         // 서버는 진단을 기억하지 못해서 리포트를 통째로 다시 보냄 (리포트 메일 발송에 필요)
         // 한 줄 질문에서 이미 메일을 보냈으면 이메일 없이 의견만 (메일 두 번 안 감)
-        body: JSON.stringify({ ...feedback, mode: "full", email: mailSentTo ? "" : feedback.email.trim(), consent: mailSentTo ? false : feedback.consent, name: feedback.name.trim(), report }),
+        body: JSON.stringify({ ...feedback, mode: "full", email: mailSentTo ? "" : feedback.email.trim(), consent: mailSentTo ? false : feedback.consent, report }),
       });
       const data = await response.json();
       if (!data.ok) {
@@ -515,8 +515,6 @@ menu: ""
                     ) : (
                     <div className="feedback-contact">
                       <strong>리포트 받을 정보</strong>
-                      <label htmlFor="fb-name">이름 (선택)</label>
-                      <div className="input-wrap"><User size={16} /><input id="fb-name" value={feedback.name} maxLength={20} placeholder="예: 홍길동" onChange={(e) => pickFeedback("name", e.target.value)} /></div>
                       <label htmlFor="fb-email">이메일 <span>*</span></label>
                       <div className="input-wrap"><Mail size={16} /><input id="fb-email" type="email" value={feedback.email} maxLength={254} placeholder="name@example.com" onChange={(e) => pickFeedback("email", e.target.value)} /></div>
                       <div className="consent-box">
@@ -525,7 +523,7 @@ menu: ""
                           <span className="custom-checkbox"><CheckCircle2 size={15} /></span>
                           <span>
                             <strong>[필수] 아래 내용을 확인했으며, 개인정보 수집·이용에 동의합니다.</strong>
-                            <small>수집 항목: 이메일, 이름(선택) · 이용 목적: 진단 리포트 메일 발송과 보내 주신 의견 확인 · 보유 기간: 2026년 11월 24일까지(이후 파기) · 동의하지 않으셔도 진단 결과는 화면에서 볼 수 있지만, 리포트 메일은 받을 수 없어요.</small>
+                            <small>수집 항목: 이메일 · 이용 목적: 진단 리포트 메일 발송과 보내 주신 의견 확인 · 보유 기간: 2026년 11월 24일까지(이후 파기) · 동의하지 않으셔도 진단 결과는 화면에서 볼 수 있지만, 리포트 메일은 받을 수 없어요.</small>
                           </span>
                         </label>
                       </div>

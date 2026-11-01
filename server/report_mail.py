@@ -195,7 +195,7 @@ def numbers_of(evidence: str, spot: dict | None):
 
 # ---------------------------------------------------------------- 칸 만들기
 
-def hero(report: dict, name: str) -> str:
+def hero(report: dict) -> str:
     summary = report.get("summary") or {}
     mention = summary.get("mention") or {}
     rate, valid, hit = mention.get("rate"), mention.get("valid") or 0, mention.get("mentioned") or 0
@@ -218,7 +218,7 @@ def hero(report: dict, name: str) -> str:
         f'<div style="color:{color};font-size:26px;font-weight:800;padding-top:2px;">{value}<span style="font-size:13px;">{unit}</span></div>'
         f'</td></tr></table></td>')
     store = esc((report.get("input") or {}).get("store"))
-    hello = f"{esc(name)} 사장님, 의견 고맙습니다. 화면에서 보신 리포트를 보내 드려요." if name else "화면에서 보신 리포트를 보내 드려요."
+    hello = "사장님, 의견 고맙습니다. 화면에서 보신 리포트를 보내 드려요."
     warn = (f'<div style="margin-top:12px;padding:10px 12px;border-radius:10px;background:#fff8e7;color:#8a641b;font-size:12px;">'
             f'<b>신뢰도 낮음</b> · 정상적으로 받은 AI 답변이 충분하지 않아 결과가 실제와 다를 수 있어요.</div>') if summary.get("low_reliability") else ""
     return (
@@ -449,10 +449,10 @@ def suggestions_section(report: dict) -> str:
     return head + spot_html + weak_html + todo
 
 
-def build_report_html(report: dict, name: str = "") -> str:
+def build_report_html(report: dict) -> str:
     """리포트(dict) → 메일 본문 HTML 한 덩어리. 화면 리포트와 같은 순서로 만든다."""
     rows = question_rows(report)
-    parts = [hero(report, name), overview(report, rows), questions(rows), agent_section(report), suggestions_section(report)]
+    parts = [hero(report), overview(report, rows), questions(rows), agent_section(report), suggestions_section(report)]
     footer = (f'<tr><td style="padding:30px 0 6px;color:{SUB};font-size:12px;line-height:1.8;">'
               f'답변 원문과 [더 자세히 진단하기]는 화면에서 볼 수 있어요. 언제든 다시 점검할 수 있어요: '
               f'<a href="{SITE_URL}" style="color:{PURPLE};">{SITE_URL}</a></td></tr>'

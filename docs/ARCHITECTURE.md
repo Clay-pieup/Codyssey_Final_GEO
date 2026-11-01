@@ -64,7 +64,7 @@ sequenceDiagram
 | ⑤ | 언급 여부·순위·소개 문구·함께 나온 가게·출처 (3장 측정 방법) | 같은 질문의 답 3개를 한 번에 분석 → 분석 호출 30회 → 10회 | `ai/diagnosis.py` `analyze_all()` `summarize()` |
 | ⑥ | **할지 말지는 규칙**(30% 미만), **무엇을 물을지는 AI**. 도구 3개를 함수로 주면 Gemini가 1~2개를 골라 이유와 함께 호출 → 코드가 검사 후 실행 | G3 "AI가 2개 이상의 도구 중 스스로 고름". AI가 가게를 **모르는지 / 알지만 추천 안 하는지** 구분 | `ai/agent.py` `run_agent()`, `ai/gemini_client.py` `choose_tools()` |
 | ⑦ | 제목·할 일·근거 3개. 근거는 진단 결과 안의 숫자·가게 이름만 | 근거 없는 약속("노출 30% 상승") 방지 | `ai/diagnosis.py` `suggest()` |
-| ⑧ | 결과를 칸 21개(한 줄짜리 20개 + 메일 본문 HTML 1개)로 Make에 전송 | 시트·메일을 코드 없이 연결, G3 "이벤트로 2개 이상 서비스가 사람 없이 이어짐". Make가 실패해도 화면 결과는 그대로 | `server/make_sender.py`, `server/report_mail.py` |
+| ⑧ | 결과를 칸 20개(한 줄짜리 19개 + 메일 본문 HTML 1개)로 Make에 전송 | 시트·메일을 코드 없이 연결, G3 "이벤트로 2개 이상 서비스가 사람 없이 이어짐". Make가 실패해도 화면 결과는 그대로 | `server/make_sender.py`, `server/report_mail.py` |
 
 **"더 자세히 진단하기" 버튼**: ⑥이 자동으로 안 돌았을 때만 보임(`more_available`). 서버는 요청이 끝나면 내용을 잊으므로 **화면이 1차 리포트를 통째로 다시 보내고**(`POST /api/more`), 서버가 Agent를 1번 실행한 뒤 개선 제안을 다시 만든다(`run_more()`). 진단 1회당 1번.
 
@@ -144,9 +144,9 @@ sequenceDiagram
 
 **`POST /api/places`** (가게 검색): `{"query": "명동교자 명동"}` → `{"ok", "error", "places": [{"name", "category", "address"(지번), "road_address", "region", "region_note", "menus"}]}` 최대 5개. `menus`는 업종(예: 한식>칼국수,만두)에서 뽑은 대표 메뉴 후보(최대 3개, "카페"처럼 큰 분류만 있으면 빈 목록). `region`은 지번 주소에서 시·구·동까지 잘라 만든 값, `""`이면 `region_note`(읍·면 미지원, 동을 못 찾음)를 보여 주고 직접 입력. 검색어 2~40자, 네이버 열쇠는 서버 환경 변수에만. 네이버 클라우드 NAVER API HUB 주소(`naverapihub.apigw.ntruss.com/search/v1/local`)와 헤더(`X-NCP-APIGW-API-KEY-ID`·`X-NCP-APIGW-API-KEY`) 사용, 하루 한도 25,000회
 
-**`POST /api/feedback`** (사장님 의견 + 리포트 메일, 11/1부터 `mode` 3가지): `{"mode", "report": 리포트 전체, …}` → `{"ok", "feedback_saved", "mail_sent", "error"}`. ① `quick`(리포트 중간 한 줄 질문): `accuracy`·`competitors`·`useful` 중 **딱 하나** → 피드백 시트만. ② `mail`("메일로 보관할까요?"): `email`, `consent: true`, `name`(선택) → Make로 리포트(`event: "feedback_report"`, `name`·`report_html` 칸) → 연락처 시트 + 리포트 메일. ③ `full`(맨 아래 5문항 팝업, `mode`가 없으면 이것): `clarity` 1~5, `accuracy`, `competitors`, `useful`, `comment`(300자) → 피드백 시트, `email`+`consent`가 함께 오면 리포트 메일도(이미 ②로 보냈으면 이메일 없이). 이름은 선택, 이메일은 동의가 true일 때만. 피드백 시트(이름·이메일 없음)는 구글 Apps Script 웹 앱([`automation/feedback_sheet.gs`](../automation/feedback_sheet.gs)), 한 줄 질문도 같은 칸을 써서 Apps Script는 그대로(답하지 않은 칸은 빈칸). 저장 성공은 Apps Script가 `ok`라고 답할 때만으로 보고, 실패하면 Vercel 로그에 `[feedback]`으로 시작하는 이유 한 줄(주소 비어 있음, 구글 로그인 화면으로 이동 등)을 남김(10/31)
+**`POST /api/feedback`** (사장님 의견 + 리포트 메일, 11/1부터 `mode` 3가지): `{"mode", "report": 리포트 전체, …}` → `{"ok", "feedback_saved", "mail_sent", "error"}`. ① `quick`(리포트 중간 한 줄 질문): `accuracy`·`competitors`·`useful` 중 **딱 하나** → 피드백 시트만. ② `mail`("메일로 보관할까요?"): `email`, `consent: true` → Make로 리포트(`event: "feedback_report"`, `report_html` 칸) → 연락처 시트 + 리포트 메일. ③ `full`(맨 아래 5문항 팝업, `mode`가 없으면 이것): `clarity` 1~5, `accuracy`, `competitors`, `useful`, `comment`(300자) → 피드백 시트, `email`+`consent`가 함께 오면 리포트 메일도(이미 ②로 보냈으면 이메일 없이). 이름은 받지 않음(11/1), 이메일은 동의가 true일 때만. 피드백 시트(이름·이메일 없음)는 구글 Apps Script 웹 앱([`automation/feedback_sheet.gs`](../automation/feedback_sheet.gs)), 한 줄 질문도 같은 칸을 써서 Apps Script는 그대로(답하지 않은 칸은 빈칸). 저장 성공은 Apps Script가 `ok`라고 답할 때만으로 보고, 실패하면 Vercel 로그에 `[feedback]`으로 시작하는 이유 한 줄(주소 비어 있음, 구글 로그인 화면으로 이동 등)을 남김(10/31)
 
-**서버 → Make 웹훅 (칸 21개)**
+**서버 → Make 웹훅 (칸 20개)**
 
 | 칸 | 진단결과 시트 | 연락처 시트 | 메일 |
 | --- | :-: | :-: | :-: |
@@ -155,7 +155,6 @@ sequenceDiagram
 | `store` | ○ | ○ | ○ |
 | `diagnosed_at` (한국 시각) | ○ | ○ | |
 | `email`, `consent` (동의했을 때만) | | ○ | `email` = 받는 사람 |
-| `name` (의견 팝업에서 동의했을 때만, 10/31 추가) | | 연결 필요 | 연결 필요 |
 | `report_html` (메일 본문: 화면과 같은 형식의 리포트 HTML, 메일 보낼 때만, 10/31 추가) | | | 연결 필요 (본문 형식 Raw HTML) |
 
 - 진단결과 시트에는 이메일을 넣지 않음. Make 필터: 이메일이 있고 동의가 true일 때만 연락처 기록·메일 발송. 연락처 시트는 2026-11-24 파기 (칸 연결: [블루프린트](../automation/make_scenario.json))

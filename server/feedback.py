@@ -4,7 +4,7 @@
 - 문항은 리포트 영역(결과 이해, AI가 소개한 말, 함께 나온 가게, 개선 제안)에 맞춘 5개
 - 11/1 "한 줄 질문": 리포트 중간 카드에서 위 문항 중 하나(AI가 소개한 말 → 없으면 함께 나온 가게 → 없으면 개선 제안)만
   탭 한 번으로 받는다 (quick=True). 같은 칸을 쓰므로 피드백 시트(Apps Script)는 고치지 않는다
-- 의견 시트에는 이름·이메일을 넣지 않는다 (진단결과·연락처 시트를 나눈 것과 같은 원칙). 이름·이메일은 리포트 메일 발송(Make)에만 쓴다
+- 의견 시트에는 이메일을 넣지 않는다 (진단결과·연락처 시트를 나눈 것과 같은 원칙). 이메일은 리포트 메일 발송(Make)에만 쓴다. 이름은 11/1부터 받지 않음
 - 저장 주소(FEEDBACK_WEBHOOK_URL)는 구글 Apps Script 웹 앱(automation/feedback_sheet.gs). 시트에 적으면 "ok"라고 답한다
 - 저장 성공은 그 "ok" 답을 받았을 때만 (10/31: 구글 로그인 화면이 대신 열려도 성공으로 착각하던 문제 수정)
 - 실패하면 Vercel 로그에 "[feedback] 이유" 한 줄을 남긴다. 주소·의견 내용은 남기지 않는다 (사장님 화면은 그대로)
@@ -20,7 +20,6 @@ from datetime import datetime, timedelta, timezone
 KST = timezone(timedelta(hours=9))
 TIMEOUT_SEC = 10
 MAX_COMMENT = 300
-MAX_NAME = 20
 
 # 고르는 문항의 보기 (화면 버튼과 같아야 함)
 CHOICES = {
@@ -34,11 +33,6 @@ def _short_text(value, limit: int) -> str:
     """글자만 받고 길이를 자른다. =, +, -, @로 시작하면 시트가 수식으로 실행하지 않게 앞에 '를 붙인다."""
     text = value.strip()[:limit] if isinstance(value, str) else ""
     return "'" + text if text[:1] in ("=", "+", "-", "@") else text
-
-
-def check_name(value) -> str:
-    """이름은 1~20자 글자만. 아니면 빈 문자열."""
-    return _short_text(value, MAX_NAME) if isinstance(value, str) and value.strip() else ""
 
 
 def check_feedback(data: dict, report: dict, quick: bool = False) -> tuple[dict | None, list[str]]:

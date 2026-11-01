@@ -1,9 +1,9 @@
 // ---------- 결과 리포트: 한 줄 질문 + 메일 보관 (11/1 팀장 결정: 피드백 전략 1 + 3 혼합) ----------
 // 1) "한눈에 보기" 바로 아래에서 한 가지만 묻는다 → 탭 한 번이면 피드백 시트에 저장 (리포트 끝까지 안 내려도 됨)
-// 3) 답하면 "이 화면을 닫으면 결과가 사라져요. 메일로 보관할까요?" → 이메일·동의(이름은 선택)로 리포트 메일
+// 3) 답하면 "이 화면을 닫으면 결과가 사라져요. 메일로 보관할까요?" → 이메일·동의로 리포트 메일 (이름은 받지 않음)
 // 묻는 칸은 맨 아래 5문항 팝업과 같은 칸을 써서 피드백 시트(Apps Script)는 고치지 않는다
 import React, { useState } from "react";
-import { CheckCircle2, Mail, User } from "lucide-react";
+import { CheckCircle2, Mail } from "lucide-react";
 
 // 무엇을 물을지: AI가 소개한 말이 있으면 그것 → 없으면 함께 나온 가게 → 둘 다 없으면 개선 제안
 // 보기마다 [화면 글자, 서버에 보내는 값(팝업 보기와 같은 값)]
@@ -28,7 +28,6 @@ export function ReportQuickAsk({ report, mailSentTo, onAnswered, onMailSent, onM
   const [picked, setPicked] = useState(null);       // 고른 보기 (화면 글자)
   const [step, setStep] = useState("ask");          // ask → sending → keep(메일 보관 묻기) → mailing
   const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
   const [consent, setConsent] = useState(false);
   const [error, setError] = useState("");
 
@@ -57,7 +56,7 @@ export function ReportQuickAsk({ report, mailSentTo, onAnswered, onMailSent, onM
     setError("");
     setStep("mailing");
     try {
-      const data = await post({ mode: "mail", email: email.trim(), name: name.trim(), consent: true });
+      const data = await post({ mode: "mail", email: email.trim(), consent: true });
       if (!data.ok) throw new Error(data.error);
       onMailSent(email.trim());
     } catch (e) {
@@ -100,11 +99,10 @@ export function ReportQuickAsk({ report, mailSentTo, onAnswered, onMailSent, onM
           <p className="qa-hint">지금 보시는 리포트와 같은 내용을 메일로 보내 드려요.</p>
           <div className="qa-form">
             <div className="input-wrap"><Mail size={16} /><input id="qa-email" type="email" value={email} maxLength={254} placeholder="이메일 (예: name@example.com)" onChange={(e) => { setEmail(e.target.value); setError(""); }} /></div>
-            <div className="input-wrap"><User size={16} /><input id="qa-name" value={name} maxLength={20} placeholder="이름 (선택)" onChange={(e) => setName(e.target.value)} /></div>
           </div>
           <label className="qa-consent">
             <input type="checkbox" checked={consent} onChange={(e) => { setConsent(e.target.checked); setError(""); }} />
-            <span><b>[필수] 개인정보 수집·이용에 동의합니다.</b> 수집 항목: 이메일, 이름(선택) · 이용 목적: 진단 리포트 메일 발송 · 보유 기간: 2026년 11월 24일까지(이후 파기) · 동의하지 않으셔도 진단 결과는 화면에서 볼 수 있어요.</span>
+            <span><b>[필수] 개인정보 수집·이용에 동의합니다.</b> 수집 항목: 이메일 · 이용 목적: 진단 리포트 메일 발송 · 보유 기간: 2026년 11월 24일까지(이후 파기) · 동의하지 않으셔도 진단 결과는 화면에서 볼 수 있어요.</span>
           </label>
           {error && <p className="error-message">{error}</p>}
           <button type="button" className="qa-send" onClick={sendMail} disabled={step === "mailing"}>

@@ -2,11 +2,11 @@
 
 요청의 mode에 따라 세 가지 (11/1 "한 줄 질문 + 메일 보관" 설계):
 - "quick": 리포트 중간 한 줄 질문에 탭 한 번 → 의견만 피드백 시트로 (이름·이메일 없음)
-- "mail":  한 줄 질문 뒤 "메일로 보관할까요?" → 이메일·동의(이름은 선택)를 받아 리포트를 Make로 → 연락처 시트 + Gmail
+- "mail":  한 줄 질문 뒤 "메일로 보관할까요?" → 이메일·동의를 받아 리포트를 Make로 → 연락처 시트 + Gmail
 - "full":  맨 아래 5문항 팝업 → 의견을 피드백 시트로, 이메일·동의가 함께 오면 리포트 메일도 (이미 메일을 받았으면 이메일 없이)
 약속: docs/ARCHITECTURE.md 5장
 - 서버는 진단을 기억하지 못하므로 화면이 리포트를 통째로 다시 보낸다 ("더 자세히 진단하기"와 같은 방식)
-- 이메일은 개인정보 동의가 정확히 true일 때만 쓴다 (consented_email). 이름은 선택
+- 이메일은 개인정보 동의가 정확히 true일 때만 쓴다 (consented_email). 이름은 받지 않음 (11/1 팀장 결정)
 """
 
 import os
@@ -16,7 +16,7 @@ from http.server import BaseHTTPRequestHandler
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from server.feedback import check_feedback, check_name, send_feedback  # noqa: E402
+from server.feedback import check_feedback, send_feedback  # noqa: E402
 from server.http_utils import (  # noqa: E402
     bad_request, consented_email, method_not_allowed, read_json, send_json, server_error,
 )
@@ -39,7 +39,6 @@ class handler(BaseHTTPRequestHandler):
         if mode not in MODES:
             return bad_request(self, "mode는 quick·mail·full 중 하나")
 
-        name = check_name(data.get("name"))   # 선택 (없으면 빈칸)
         email = consented_email(data)
         problems = []
         feedback = None
@@ -55,7 +54,7 @@ class handler(BaseHTTPRequestHandler):
 
         try:
             saved = send_feedback(feedback) if feedback else {"ok": False}                    # ① 의견 → 피드백 시트
-            delivery = send_to_make(report, "feedback_report", email, name) if email else NOT_SENT   # ② 리포트 → Make → 연락처 시트 + Gmail
+            delivery = send_to_make(report, "feedback_report", email) if email else NOT_SENT   # ② 리포트 → Make → 연락처 시트 + Gmail
         except Exception:
             traceback.print_exc()
             return server_error(self)
