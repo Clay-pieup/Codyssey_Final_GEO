@@ -157,7 +157,7 @@ sequenceDiagram
 | `email`, `consent` (동의했을 때만) | | ○ | `email` = 받는 사람 |
 | `report_html` (메일 본문: 화면과 같은 형식의 리포트 HTML, 메일 보낼 때만, 10/31 추가) | | | 연결 필요 (본문 형식 Raw HTML) |
 
-- 진단결과 시트에는 이메일을 넣지 않음. Make 필터: 이메일이 있고 동의가 true일 때만 연락처 기록·메일 발송. 연락처 시트는 2026-11-24 파기 (칸 연결: [블루프린트](../automation/make_scenario.json))
+- 진단결과 시트에는 이메일을 넣지 않음. Make 필터: 이메일이 있을 때만 연락처 기록·메일 발송(11/3 PR #27부터. 서버가 동의가 true일 때만 이메일을 보내므로 동의 확인은 서버에서). 메일 본문은 Raw HTML로 `report_html`. 연락처 시트는 2026-11-24 파기 (칸 연결: [블루프린트](../automation/make_scenario.json), 보내는 Gmail 주소는 `sender@example.com`으로 가림)
 - 메일 본문 `report_html`은 서버([`server/report_mail.py`](../server/report_mail.py))가 **화면 리포트와 같은 순서·같은 문장 규칙**으로 만듦(11/1 개편): 요약 띠 → 한눈에 보기 8칸 → 질문 10개 → AI 추가 진단 → 개선 제안 → 안내. 메일 프로그램은 그림(SVG)·버튼·펼치기를 막아 도넛 대신 한 줄 나눔 막대, 모든 그림은 표 칸의 너비·색으로 그림. 답변 원문은 Gmail이 약 100KB 넘는 메일을 잘라서 넣지 않음(예시 리포트 약 41KB). AI 답변에서 온 글자는 기호를 바꿔 넣음(메일 모양이 깨지지 않게)
 - 웹훅 주소·API 키는 Vercel 환경 변수에만 (목록: [README 5-4](../README.md))
 

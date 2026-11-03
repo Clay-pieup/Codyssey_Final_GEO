@@ -495,7 +495,7 @@
                                 "scoped": "true",
                                 "connection": "google"
                             },
-                            "label": "Yujin's Google connection (jfyouni@gmail.com)"
+                            "label": "Yujin's Google connection (sender@example.com)"
                         }
                     }
                 },
@@ -763,7 +763,7 @@
                 ],
                 "subject": "[우리가게 AI 점검] {{1.store}} AI 점검 리포트",
                 "bodyType": "rawHtml",
-                "from": "\"우리가게AI 점검\" <jfyouni@gmail.com>",
+                "from": "\"우리가게AI 점검\" <sender@example.com>",
                 "content": "{{1.report_html}}"
             },
             "metadata": {
@@ -782,7 +782,7 @@
                 "restore": {
                     "parameters": {
                         "__IMTCONN__": {
-                            "label": "Gmail connection (jfyouni@gmail.com)",
+                            "label": "Gmail connection (sender@example.com)",
                             "data": {
                                 "scoped": "true",
                                 "connection": "google-email"
@@ -804,7 +804,7 @@
                         },
                         "from": {
                             "mode": "chose",
-                            "label": "\"우리가게AI 점검\" <jfyouni@gmail.com>"
+                            "label": "\"우리가게AI 점검\" <sender@example.com>"
                         },
                         "cc": {
                             "mode": "chose"
