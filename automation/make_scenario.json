@@ -1,993 +1,964 @@
 {
-  "name": "Integration Webhooks",
-  "flow": [
-    {
-      "id": 1,
-      "module": "gateway:CustomWebHook",
-      "version": 1,
-      "parameters": {
-        "hook": "REMOVED",
-        "maxResults": 1
-      },
-      "mapper": {},
-      "metadata": {
-        "designer": {
-          "x": 0,
-          "y": 0
-        },
-        "restore": {
-          "parameters": {
-            "hook": {
-              "data": {
-                "editable": "true"
-              },
-              "label": "GEO_Diagnosis_Webhook"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "hook",
-            "type": "hook:gateway-webhook",
-            "label": "Webhook",
-            "required": true
-          },
-          {
-            "name": "maxResults",
-            "type": "number",
-            "label": "Maximum number of results"
-          }
-        ]
-      }
-    },
-    {
-      "id": 2,
-      "module": "google-sheets:addRow",
-      "version": 2,
-      "parameters": {
-        "__IMTCONN__": "REMOVED"
-      },
-      "mapper": {
-        "from": "drive",
-        "mode": "select",
-        "values": {
-          "0": "{{1.event}}",
-          "1": "{{1.diagnosed_at}}",
-          "2": "{{1.store}}",
-          "3": "{{1.region}}",
-          "4": "{{1.station}}",
-          "5": "{{1.menus}}",
-          "6": "{{1.mention_rate}}",
-          "7": "{{1.mention_text}}",
-          "8": "{{1.by_type_text}}",
-          "9": "{{1.competitors_text}}",
-          "10": "{{1.questions_text}}",
-          "11": "{{1.agent_trigger}}",
-          "12": "{{1.agent_text}}",
-          "13": "{{1.suggestions_text}}",
-          "14": "{{1.notice}}",
-          "15": "{{1.low_reliability}}",
-          "16": "{{1.model}}"
-        },
-        "sheetId": "진단결과",
-        "spreadsheetId": "REMOVED",
-        "includesHeaders": true,
-        "insertDataOption": "INSERT_ROWS",
-        "useColumnHeaders": false,
-        "valueInputOption": "USER_ENTERED",
-        "insertUnformatted": false
-      },
-      "metadata": {
-        "designer": {
-          "x": 300,
-          "y": 0
-        },
-        "restore": {
-          "expect": {
-            "from": {
-              "label": "My Drive"
+    "name": "Integration Webhooks",
+    "flow": [
+        {
+            "id": 1,
+            "module": "gateway:CustomWebHook",
+            "version": 1,
+            "parameters": {
+                "hook": 3967346,
+                "maxResults": 1
             },
-            "mode": {
-              "label": "Search by path"
-            },
-            "sheetId": {
-              "label": "진단결과"
-            },
-            "spreadsheetId": {
-              "path": [
-                "REMOVED"
-              ]
-            },
-            "includesHeaders": {
-              "label": "Yes"
-            },
-            "insertDataOption": {
-              "mode": "chose",
-              "label": "Insert rows"
-            },
-            "useColumnHeaders": {
-              "label": "No"
-            },
-            "valueInputOption": {
-              "mode": "chose",
-              "label": "User entered"
-            },
-            "insertUnformatted": {
-              "mode": "chose"
-            }
-          },
-          "parameters": {
-            "__IMTCONN__": {
-              "data": {
-                "scoped": "true",
-                "connection": "google"
-              },
-              "label": "REMOVED"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "__IMTCONN__",
-            "type": "account:google",
-            "label": "Connection",
-            "required": true
-          }
-        ],
-        "expect": [
-          {
-            "name": "mode",
-            "type": "select",
-            "label": "Search Method",
-            "required": true,
-            "validate": {
-              "enum": [
-                "select",
-                "fromAll",
-                "map"
-              ]
-            }
-          },
-          {
-            "name": "insertUnformatted",
-            "type": "boolean",
-            "label": "Unformatted",
-            "required": true
-          },
-          {
-            "name": "valueInputOption",
-            "type": "select",
-            "label": "Value input option",
-            "required": true,
-            "validate": {
-              "enum": [
-                "USER_ENTERED",
-                "RAW"
-              ]
-            }
-          },
-          {
-            "name": "insertDataOption",
-            "type": "select",
-            "label": "Insert data option",
-            "validate": {
-              "enum": [
-                "INSERT_ROWS",
-                "OVERWRITE"
-              ]
-            }
-          },
-          {
-            "name": "from",
-            "type": "select",
-            "label": "Drive",
-            "required": true,
-            "validate": {
-              "enum": [
-                "drive",
-                "share",
-                "team"
-              ]
-            }
-          },
-          {
-            "name": "spreadsheetId",
-            "type": "file",
-            "label": "Spreadsheet Name",
-            "required": true
-          },
-          {
-            "name": "sheetId",
-            "type": "select",
-            "label": "Sheet Name",
-            "required": true
-          },
-          {
-            "name": "includesHeaders",
-            "type": "select",
-            "label": "Table contains headers",
-            "required": true,
-            "validate": {
-              "enum": [
-                true,
-                false
-              ]
-            }
-          },
-          {
-            "name": "useColumnHeaders",
-            "type": "select",
-            "label": "Use column headers as IDs of the columns",
-            "required": true,
-            "validate": {
-              "enum": [
-                true,
-                false
-              ]
-            }
-          },
-          {
-            "name": "values",
-            "spec": [
-              {
-                "name": "0",
-                "type": "text",
-                "label": "이벤트 (A)"
-              },
-              {
-                "name": "1",
-                "type": "text",
-                "label": "진단일시 (B)"
-              },
-              {
-                "name": "2",
-                "type": "text",
-                "label": "상호명 (C)"
-              },
-              {
-                "name": "3",
-                "type": "text",
-                "label": "지역 (D)"
-              },
-              {
-                "name": "4",
-                "type": "text",
-                "label": "가까운역 (E)"
-              },
-              {
-                "name": "5",
-                "type": "text",
-                "label": "대표메뉴 (F)"
-              },
-              {
-                "name": "6",
-                "type": "text",
-                "label": "언급률 (G)"
-              },
-              {
-                "name": "7",
-                "type": "text",
-                "label": "언급결과 (H)"
-              },
-              {
-                "name": "8",
-                "type": "text",
-                "label": "질문유형별결과 (I)"
-              },
-              {
-                "name": "9",
-                "type": "text",
-                "label": "경쟁매장 (J)"
-              },
-              {
-                "name": "10",
-                "type": "text",
-                "label": "진단질문 (K)"
-              },
-              {
-                "name": "11",
-                "type": "text",
-                "label": "추가진단실행여부 (L)"
-              },
-              {
-                "name": "12",
-                "type": "text",
-                "label": "추가진단결과 (M)"
-              },
-              {
-                "name": "13",
-                "type": "text",
-                "label": "개선제안 (N)"
-              },
-              {
-                "name": "14",
-                "type": "text",
-                "label": "안내문 (O)"
-              },
-              {
-                "name": "15",
-                "type": "text",
-                "label": "낮은신뢰도여부 (P)"
-              },
-              {
-                "name": "16",
-                "type": "text",
-                "label": "AI모델 (Q)"
-              },
-              {
-                "name": "17",
-                "type": "text",
-                "label": "(R)"
-              },
-              {
-                "name": "18",
-                "type": "text",
-                "label": "(S)"
-              },
-              {
-                "name": "19",
-                "type": "text",
-                "label": "(T)"
-              },
-              {
-                "name": "20",
-                "type": "text",
-                "label": "(U)"
-              },
-              {
-                "name": "21",
-                "type": "text",
-                "label": "(V)"
-              },
-              {
-                "name": "22",
-                "type": "text",
-                "label": "(W)"
-              },
-              {
-                "name": "23",
-                "type": "text",
-                "label": "(X)"
-              },
-              {
-                "name": "24",
-                "type": "text",
-                "label": "(Y)"
-              },
-              {
-                "name": "25",
-                "type": "text",
-                "label": "(Z)"
-              }
-            ],
-            "type": "collection",
-            "label": "Values in columns",
-            "metadata": [
-              [
-                [
-                  "이벤트",
-                  "진단일시",
-                  "상호명",
-                  "지역",
-                  "가까운역",
-                  "대표메뉴",
-                  "언급률",
-                  "언급결과",
-                  "질문유형별결과",
-                  "경쟁매장",
-                  "진단질문",
-                  "추가진단실행여부",
-                  "추가진단결과",
-                  "개선제안",
-                  "안내문",
-                  "낮은신뢰도여부",
-                  "AI모델"
-                ]
-              ]
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "id": 6,
-      "module": "google-sheets:addRow",
-      "version": 2,
-      "parameters": {
-        "__IMTCONN__": "REMOVED"
-      },
-      "filter": {
-        "name": "이메일 수집 동의자만 저장",
-        "conditions": [
-          [
-            {
-              "a": "{{1.email}}",
-              "b": "",
-              "o": "text:notequal"
-            },
-            {
-              "a": "{{1.consent}}",
-              "b": "true",
-              "o": "text:equal"
-            }
-          ]
-        ]
-      },
-      "mapper": {
-        "from": "drive",
-        "mode": "select",
-        "values": {
-          "0": "{{1.diagnosed_at}}",
-          "1": "{{1.store}}",
-          "2": "{{1.email}}",
-          "3": "{{1.consent}}"
-        },
-        "sheetId": "연락처",
-        "spreadsheetId": "REMOVED",
-        "includesHeaders": true,
-        "insertDataOption": "INSERT_ROWS",
-        "useColumnHeaders": false,
-        "valueInputOption": "USER_ENTERED",
-        "insertUnformatted": false
-      },
-      "metadata": {
-        "designer": {
-          "x": 600,
-          "y": 0
-        },
-        "restore": {
-          "expect": {
-            "from": {
-              "label": "My Drive"
-            },
-            "mode": {
-              "label": "Search by path"
-            },
-            "sheetId": {
-              "label": "연락처"
-            },
-            "spreadsheetId": {
-              "path": [
-                "REMOVED"
-              ]
-            },
-            "includesHeaders": {
-              "label": "Yes"
-            },
-            "insertDataOption": {
-              "mode": "chose",
-              "label": "Insert rows"
-            },
-            "useColumnHeaders": {
-              "label": "No"
-            },
-            "valueInputOption": {
-              "mode": "chose",
-              "label": "User entered"
-            },
-            "insertUnformatted": {
-              "mode": "chose"
-            }
-          },
-          "parameters": {
-            "__IMTCONN__": {
-              "data": {
-                "scoped": "true",
-                "connection": "google"
-              },
-              "label": "REMOVED"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "__IMTCONN__",
-            "type": "account:google",
-            "label": "Connection",
-            "required": true
-          }
-        ],
-        "expect": [
-          {
-            "name": "mode",
-            "type": "select",
-            "label": "Search Method",
-            "required": true,
-            "validate": {
-              "enum": [
-                "select",
-                "fromAll",
-                "map"
-              ]
-            }
-          },
-          {
-            "name": "insertUnformatted",
-            "type": "boolean",
-            "label": "Unformatted",
-            "required": true
-          },
-          {
-            "name": "valueInputOption",
-            "type": "select",
-            "label": "Value input option",
-            "required": true,
-            "validate": {
-              "enum": [
-                "USER_ENTERED",
-                "RAW"
-              ]
-            }
-          },
-          {
-            "name": "insertDataOption",
-            "type": "select",
-            "label": "Insert data option",
-            "validate": {
-              "enum": [
-                "INSERT_ROWS",
-                "OVERWRITE"
-              ]
-            }
-          },
-          {
-            "name": "from",
-            "type": "select",
-            "label": "Drive",
-            "required": true,
-            "validate": {
-              "enum": [
-                "drive",
-                "share",
-                "team"
-              ]
-            }
-          },
-          {
-            "name": "spreadsheetId",
-            "type": "file",
-            "label": "Spreadsheet Name",
-            "required": true
-          },
-          {
-            "name": "sheetId",
-            "type": "select",
-            "label": "Sheet Name",
-            "required": true
-          },
-          {
-            "name": "includesHeaders",
-            "type": "select",
-            "label": "Table contains headers",
-            "required": true,
-            "validate": {
-              "enum": [
-                true,
-                false
-              ]
-            }
-          },
-          {
-            "name": "useColumnHeaders",
-            "type": "select",
-            "label": "Use column headers as IDs of the columns",
-            "required": true,
-            "validate": {
-              "enum": [
-                true,
-                false
-              ]
-            }
-          },
-          {
-            "name": "values",
-            "spec": [
-              {
-                "name": "0",
-                "type": "text",
-                "label": "수집일시 (A)"
-              },
-              {
-                "name": "1",
-                "type": "text",
-                "label": "상호명 (B)"
-              },
-              {
-                "name": "2",
-                "type": "text",
-                "label": "이메일주소 (C)"
-              },
-              {
-                "name": "3",
-                "type": "text",
-                "label": "이메일수집동의 (D)"
-              },
-              {
-                "name": "4",
-                "type": "text",
-                "label": "(E)"
-              },
-              {
-                "name": "5",
-                "type": "text",
-                "label": "(F)"
-              },
-              {
-                "name": "6",
-                "type": "text",
-                "label": "(G)"
-              },
-              {
-                "name": "7",
-                "type": "text",
-                "label": "(H)"
-              },
-              {
-                "name": "8",
-                "type": "text",
-                "label": "(I)"
-              },
-              {
-                "name": "9",
-                "type": "text",
-                "label": "(J)"
-              },
-              {
-                "name": "10",
-                "type": "text",
-                "label": "(K)"
-              },
-              {
-                "name": "11",
-                "type": "text",
-                "label": "(L)"
-              },
-              {
-                "name": "12",
-                "type": "text",
-                "label": "(M)"
-              },
-              {
-                "name": "13",
-                "type": "text",
-                "label": "(N)"
-              },
-              {
-                "name": "14",
-                "type": "text",
-                "label": "(O)"
-              },
-              {
-                "name": "15",
-                "type": "text",
-                "label": "(P)"
-              },
-              {
-                "name": "16",
-                "type": "text",
-                "label": "(Q)"
-              },
-              {
-                "name": "17",
-                "type": "text",
-                "label": "(R)"
-              },
-              {
-                "name": "18",
-                "type": "text",
-                "label": "(S)"
-              },
-              {
-                "name": "19",
-                "type": "text",
-                "label": "(T)"
-              },
-              {
-                "name": "20",
-                "type": "text",
-                "label": "(U)"
-              },
-              {
-                "name": "21",
-                "type": "text",
-                "label": "(V)"
-              },
-              {
-                "name": "22",
-                "type": "text",
-                "label": "(W)"
-              },
-              {
-                "name": "23",
-                "type": "text",
-                "label": "(X)"
-              },
-              {
-                "name": "24",
-                "type": "text",
-                "label": "(Y)"
-              },
-              {
-                "name": "25",
-                "type": "text",
-                "label": "(Z)"
-              }
-            ],
-            "type": "collection",
-            "label": "Values in columns",
-            "metadata": [
-              [
-                [
-                  "수집일시",
-                  "상호명",
-                  "이메일주소",
-                  "이메일수집동의"
-                ]
-              ]
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "id": 7,
-      "module": "google-email:sendAnEmail",
-      "version": 4,
-      "parameters": {
-        "__IMTCONN__": "REMOVED"
-      },
-      "mapper": {
-        "to": [
-          "{{1.email}}"
-        ],
-        "subject": "[GEO AI] 매장 AI 검색 노출 진단 결과 안내",
-        "bodyType": "collection",
-        "contents": [
-          {
-            "text": "안녕하세요. GEO AI 매장 검색 노출 진단 서비스입니다.\r\n\r\n신청하신 매장의 AI 검색 노출 진단 결과를 안내드립니다.\r\n\r\n■ 매장 정보\r\n상호명: {{1.store}}\r\n지역: {{1.region}}\r\n대표 메뉴: {{1.menus}}\r\n\r\n■ AI 검색 노출 진단 결과\r\n전체 AI 언급률: {{1.mention_rate}}%\r\n언급 결과: {{1.mention_text}}\n\n■ 질문 유형별 언급률\r\n{{1.by_type_text}}\n\n■ 주요 경쟁 매장\n{{1.competitors_text}}\n\n■ AI 추가 진단\n{{1.agent_text}}\r\n\r\n■ AI 검색 노출 개선 제안\r\n{{1.suggestions_text}}\r\n\r\n■ 안내 사항\r\n{{1.notice}}\n\r\n본 결과는 AI 검색 응답을 기반으로 작성되었으며, 실제 검색 결과와 차이가 있을 수 있습니다.\r\n\r\n감사합니다.\r\nGEO AI 진단 서비스",
-            "image": {}
-          }
-        ]
-      },
-      "metadata": {
-        "designer": {
-          "x": 900,
-          "y": 0
-        },
-        "restore": {
-          "parameters": {
-            "__IMTCONN__": {
-              "label": "REMOVED",
-              "data": {
-                "scoped": "true",
-                "connection": "google-email"
-              }
-            }
-          },
-          "expect": {
-            "to": {
-              "mode": "chose",
-              "items": [
-                null
-              ]
-            },
-            "bodyType": {
-              "label": "Collection of contents (text, images, etc.)"
-            },
-            "attachments": {
-              "mode": "chose"
-            },
-            "from": {
-              "mode": "chose",
-              "label": "Empty"
-            },
-            "cc": {
-              "mode": "chose"
-            },
-            "bcc": {
-              "mode": "chose"
-            },
-            "emailHeaders": {
-              "mode": "chose"
-            },
-            "contents": {
-              "mode": "chose",
-              "items": [
-                null
-              ]
-            },
-            "signature": {
-              "mode": "edit"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "__IMTCONN__",
-            "type": "account:google-email",
-            "label": "Connection",
-            "required": true
-          }
-        ],
-        "expect": [
-          {
-            "name": "to",
-            "type": "array",
-            "label": "To",
-            "required": true,
-            "spec": {
-              "type": "email",
-              "label": "Recipient email address",
-              "required": true,
-              "validate": true,
-              "name": "value"
-            }
-          },
-          {
-            "name": "subject",
-            "type": "text",
-            "label": "Subject"
-          },
-          {
-            "name": "bodyType",
-            "type": "select",
-            "label": "Body type",
-            "required": true,
-            "validate": {
-              "enum": [
-                "rawHtml",
-                "collection"
-              ]
-            }
-          },
-          {
-            "name": "attachments",
-            "type": "array",
-            "label": "Attachments",
-            "spec": {
-              "spec": [
-                {
-                  "name": "filename",
-                  "type": "filename",
-                  "label": "File name",
-                  "required": true,
-                  "semantic": "file:name"
+            "mapper": {},
+            "metadata": {
+                "designer": {
+                    "x": 0,
+                    "y": 0
                 },
-                {
-                  "name": "data",
-                  "type": "buffer",
-                  "label": "Data",
-                  "required": true,
-                  "semantic": "file:data"
-                }
-              ],
-              "type": "collection",
-              "label": "Attachment",
-              "name": "value"
-            }
-          },
-          {
-            "name": "from",
-            "type": "select",
-            "label": "From"
-          },
-          {
-            "name": "cc",
-            "type": "array",
-            "label": "CC recipients",
-            "spec": {
-              "type": "email",
-              "label": "Recipient email address",
-              "name": "value"
-            }
-          },
-          {
-            "name": "bcc",
-            "type": "array",
-            "label": "BCC recipients",
-            "spec": {
-              "type": "email",
-              "label": "Recipient email address",
-              "name": "value"
-            }
-          },
-          {
-            "name": "emailHeaders",
-            "type": "array",
-            "label": "Additional email headers",
-            "spec": {
-              "spec": [
-                {
-                  "name": "key",
-                  "type": "text",
-                  "label": "Key",
-                  "required": true
+                "setupValidation": {
+                    "result": {
+                        "valid": true,
+                        "fields": []
+                    },
+                    "version": 1,
+                    "configuration": "8eef75715291227e"
                 },
-                {
-                  "name": "value",
-                  "type": "text",
-                  "label": "Value"
-                }
-              ],
-              "type": "collection",
-              "label": "Email header",
-              "name": "value"
-            }
-          },
-          {
-            "name": "contents",
-            "type": "array",
-            "label": "Body contents",
-            "spec": {
-              "spec": [
-                {
-                  "name": "text",
-                  "type": "text",
-                  "label": "Text"
-                },
-                {
-                  "name": "image",
-                  "spec": [
-                    {
-                      "name": "filename",
-                      "type": "filename",
-                      "label": "File name",
-                      "semantic": "file:name"
-                    },
-                    {
-                      "name": "data",
-                      "type": "buffer",
-                      "label": "Data",
-                      "semantic": "file:data"
-                    },
-                    {
-                      "name": "width",
-                      "type": "uinteger",
-                      "label": "Width"
-                    },
-                    {
-                      "name": "height",
-                      "type": "uinteger",
-                      "label": "Height"
+                "restore": {
+                    "parameters": {
+                        "hook": {
+                            "data": {
+                                "editable": "true"
+                            },
+                            "label": "GEO_Diagnosis_Webhook"
+                        }
                     }
-                  ],
-                  "type": "collection",
-                  "label": "Image"
-                }
-              ],
-              "type": "collection",
-              "label": "Content",
-              "name": "value"
+                },
+                "parameters": [
+                    {
+                        "name": "hook",
+                        "type": "hook:gateway-webhook",
+                        "label": "Webhook",
+                        "required": true
+                    },
+                    {
+                        "name": "maxResults",
+                        "type": "number",
+                        "label": "Maximum number of results"
+                    }
+                ]
             }
-          },
-          {
-            "name": "signature",
-            "type": "select",
-            "label": "Signature content"
-          }
-        ]
-      }
+        },
+        {
+            "id": 2,
+            "module": "google-sheets:addRow",
+            "version": 2,
+            "parameters": {
+                "__IMTCONN__": 12296618
+            },
+            "mapper": {
+                "from": "drive",
+                "mode": "select",
+                "values": {
+                    "0": "{{1.event}}",
+                    "1": "{{1.diagnosed_at}}",
+                    "2": "{{1.store}}",
+                    "3": "{{1.region}}",
+                    "4": "{{1.station}}",
+                    "5": "{{1.menus}}",
+                    "6": "{{1.mention_rate}}",
+                    "7": "{{1.mention_text}}",
+                    "8": "{{1.by_type_text}}",
+                    "9": "{{1.competitors_text}}",
+                    "10": "{{1.questions_text}}",
+                    "11": "{{1.agent_trigger}}",
+                    "12": "{{1.agent_text}}",
+                    "13": "{{1.suggestions_text}}",
+                    "14": "{{1.notice}}",
+                    "15": "{{1.low_reliability}}",
+                    "16": "{{1.model}}"
+                },
+                "sheetId": "진단결과",
+                "spreadsheetId": "/13m5bJCDldvHvsf5EunQmoPeNOSdvEmscuBtlG1X-Nxk",
+                "includesHeaders": true,
+                "insertDataOption": "INSERT_ROWS",
+                "useColumnHeaders": false,
+                "valueInputOption": "USER_ENTERED",
+                "insertUnformatted": false
+            },
+            "metadata": {
+                "designer": {
+                    "x": 300,
+                    "y": 0
+                },
+                "setupValidation": {
+                    "result": {
+                        "valid": true,
+                        "fields": []
+                    },
+                    "version": 1,
+                    "configuration": "8ca1ecb64bfc0289"
+                },
+                "restore": {
+                    "expect": {
+                        "from": {
+                            "label": "My Drive"
+                        },
+                        "mode": {
+                            "label": "Search by path"
+                        },
+                        "sheetId": {
+                            "label": "진단결과"
+                        },
+                        "spreadsheetId": {
+                            "path": [
+                                "GEO_AI_진단관리"
+                            ]
+                        },
+                        "includesHeaders": {
+                            "label": "Yes"
+                        },
+                        "insertDataOption": {
+                            "mode": "chose",
+                            "label": "Insert rows"
+                        },
+                        "useColumnHeaders": {
+                            "label": "No"
+                        },
+                        "valueInputOption": {
+                            "mode": "chose",
+                            "label": "User entered"
+                        },
+                        "insertUnformatted": {
+                            "mode": "chose"
+                        }
+                    },
+                    "parameters": {
+                        "__IMTCONN__": {
+                            "data": {
+                                "scoped": "true",
+                                "connection": "google"
+                            },
+                            "label": "Yujin's Google connection"
+                        }
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "__IMTCONN__",
+                        "type": "account:google",
+                        "label": "Connection",
+                        "required": true
+                    }
+                ],
+                "expect": [
+                    {
+                        "name": "mode",
+                        "type": "select",
+                        "label": "Search Method",
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                "select",
+                                "fromAll",
+                                "map"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "insertUnformatted",
+                        "type": "boolean",
+                        "label": "Unformatted",
+                        "required": true
+                    },
+                    {
+                        "name": "valueInputOption",
+                        "type": "select",
+                        "label": "Value input option",
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                "USER_ENTERED",
+                                "RAW"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "insertDataOption",
+                        "type": "select",
+                        "label": "Insert data option",
+                        "validate": {
+                            "enum": [
+                                "INSERT_ROWS",
+                                "OVERWRITE"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "from",
+                        "type": "select",
+                        "label": "Drive",
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                "drive",
+                                "share",
+                                "team"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "spreadsheetId",
+                        "type": "file",
+                        "label": "Spreadsheet Name",
+                        "required": true
+                    },
+                    {
+                        "name": "sheetId",
+                        "type": "select",
+                        "label": "Sheet Name",
+                        "required": true
+                    },
+                    {
+                        "name": "includesHeaders",
+                        "type": "select",
+                        "label": "Table contains headers",
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                true,
+                                false
+                            ]
+                        }
+                    },
+                    {
+                        "name": "useColumnHeaders",
+                        "type": "select",
+                        "label": "Use column headers as IDs of the columns",
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                true,
+                                false
+                            ]
+                        }
+                    },
+                    {
+                        "name": "values",
+                        "spec": [
+                            {
+                                "name": "0",
+                                "type": "text",
+                                "label": "이벤트 (A)"
+                            },
+                            {
+                                "name": "1",
+                                "type": "text",
+                                "label": "진단일시 (B)"
+                            },
+                            {
+                                "name": "2",
+                                "type": "text",
+                                "label": "상호명 (C)"
+                            },
+                            {
+                                "name": "3",
+                                "type": "text",
+                                "label": "지역 (D)"
+                            },
+                            {
+                                "name": "4",
+                                "type": "text",
+                                "label": "가까운역 (E)"
+                            },
+                            {
+                                "name": "5",
+                                "type": "text",
+                                "label": "대표메뉴 (F)"
+                            },
+                            {
+                                "name": "6",
+                                "type": "text",
+                                "label": "언급률 (G)"
+                            },
+                            {
+                                "name": "7",
+                                "type": "text",
+                                "label": "언급결과 (H)"
+                            },
+                            {
+                                "name": "8",
+                                "type": "text",
+                                "label": "질문유형별결과 (I)"
+                            },
+                            {
+                                "name": "9",
+                                "type": "text",
+                                "label": "경쟁매장 (J)"
+                            },
+                            {
+                                "name": "10",
+                                "type": "text",
+                                "label": "진단질문 (K)"
+                            },
+                            {
+                                "name": "11",
+                                "type": "text",
+                                "label": "추가진단실행여부 (L)"
+                            },
+                            {
+                                "name": "12",
+                                "type": "text",
+                                "label": "추가진단결과 (M)"
+                            },
+                            {
+                                "name": "13",
+                                "type": "text",
+                                "label": "개선제안 (N)"
+                            },
+                            {
+                                "name": "14",
+                                "type": "text",
+                                "label": "안내문 (O)"
+                            },
+                            {
+                                "name": "15",
+                                "type": "text",
+                                "label": "낮은신뢰도여부 (P)"
+                            },
+                            {
+                                "name": "16",
+                                "type": "text",
+                                "label": "AI모델 (Q)"
+                            },
+                            {
+                                "name": "17",
+                                "type": "text",
+                                "label": "(R)"
+                            },
+                            {
+                                "name": "18",
+                                "type": "text",
+                                "label": "(S)"
+                            },
+                            {
+                                "name": "19",
+                                "type": "text",
+                                "label": "(T)"
+                            },
+                            {
+                                "name": "20",
+                                "type": "text",
+                                "label": "(U)"
+                            },
+                            {
+                                "name": "21",
+                                "type": "text",
+                                "label": "(V)"
+                            },
+                            {
+                                "name": "22",
+                                "type": "text",
+                                "label": "(W)"
+                            },
+                            {
+                                "name": "23",
+                                "type": "text",
+                                "label": "(X)"
+                            },
+                            {
+                                "name": "24",
+                                "type": "text",
+                                "label": "(Y)"
+                            },
+                            {
+                                "name": "25",
+                                "type": "text",
+                                "label": "(Z)"
+                            }
+                        ],
+                        "type": "collection",
+                        "label": "Values in columns",
+                        "metadata": [
+                            [
+                                [
+                                    "이벤트",
+                                    "진단일시",
+                                    "상호명",
+                                    "지역",
+                                    "가까운역",
+                                    "대표메뉴",
+                                    "언급률",
+                                    "언급결과",
+                                    "질문유형별결과",
+                                    "경쟁매장",
+                                    "진단질문",
+                                    "추가진단실행여부",
+                                    "추가진단결과",
+                                    "개선제안",
+                                    "안내문",
+                                    "낮은신뢰도여부",
+                                    "AI모델"
+                                ]
+                            ]
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "id": 6,
+            "module": "google-sheets:addRow",
+            "version": 2,
+            "parameters": {
+                "__IMTCONN__": 12296618
+            },
+            "filter": {
+                "name": "의견 제출 및 이메일 입력 시 발송",
+                "conditions": [
+                    [
+                        {
+                            "a": "{{1.email}}",
+                            "b": "",
+                            "o": "text:notequal"
+                        }
+                    ]
+                ]
+            },
+            "mapper": {
+                "from": "drive",
+                "mode": "select",
+                "values": {
+                    "0": "{{1.diagnosed_at}}",
+                    "1": "{{1.store}}",
+                    "2": "{{1.email}}",
+                    "3": "{{1.consent}}",
+                    "4": "{{1.name}}"
+                },
+                "sheetId": "연락처",
+                "spreadsheetId": "/13m5bJCDldvHvsf5EunQmoPeNOSdvEmscuBtlG1X-Nxk",
+                "includesHeaders": true,
+                "insertDataOption": "INSERT_ROWS",
+                "useColumnHeaders": false,
+                "valueInputOption": "USER_ENTERED",
+                "insertUnformatted": false
+            },
+            "metadata": {
+                "designer": {
+                    "x": 600,
+                    "y": 0
+                },
+                "setupValidation": {
+                    "result": {
+                        "valid": true,
+                        "fields": []
+                    },
+                    "version": 1,
+                    "configuration": "485377f1ce147c64"
+                },
+                "restore": {
+                    "expect": {
+                        "from": {
+                            "label": "My Drive"
+                        },
+                        "mode": {
+                            "label": "Search by path"
+                        },
+                        "sheetId": {
+                            "label": "연락처"
+                        },
+                        "spreadsheetId": {
+                            "path": [
+                                "GEO_AI_진단관리"
+                            ]
+                        },
+                        "includesHeaders": {
+                            "label": "Yes"
+                        },
+                        "insertDataOption": {
+                            "mode": "chose",
+                            "label": "Insert rows"
+                        },
+                        "useColumnHeaders": {
+                            "label": "No"
+                        },
+                        "valueInputOption": {
+                            "mode": "chose",
+                            "label": "User entered"
+                        },
+                        "insertUnformatted": {
+                            "mode": "chose"
+                        }
+                    },
+                    "parameters": {
+                        "__IMTCONN__": {
+                            "data": {
+                                "scoped": "true",
+                                "connection": "google"
+                            },
+                            "label": "Yujin's Google connection (jfyouni@gmail.com)"
+                        }
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "__IMTCONN__",
+                        "type": "account:google",
+                        "label": "Connection",
+                        "required": true
+                    }
+                ],
+                "expect": [
+                    {
+                        "name": "mode",
+                        "type": "select",
+                        "label": "Search Method",
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                "select",
+                                "fromAll",
+                                "map"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "insertUnformatted",
+                        "type": "boolean",
+                        "label": "Unformatted",
+                        "required": true
+                    },
+                    {
+                        "name": "valueInputOption",
+                        "type": "select",
+                        "label": "Value input option",
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                "USER_ENTERED",
+                                "RAW"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "insertDataOption",
+                        "type": "select",
+                        "label": "Insert data option",
+                        "validate": {
+                            "enum": [
+                                "INSERT_ROWS",
+                                "OVERWRITE"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "from",
+                        "type": "select",
+                        "label": "Drive",
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                "drive",
+                                "share",
+                                "team"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "spreadsheetId",
+                        "type": "file",
+                        "label": "Spreadsheet Name",
+                        "required": true
+                    },
+                    {
+                        "name": "sheetId",
+                        "type": "select",
+                        "label": "Sheet Name",
+                        "required": true
+                    },
+                    {
+                        "name": "includesHeaders",
+                        "type": "select",
+                        "label": "Table contains headers",
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                true,
+                                false
+                            ]
+                        }
+                    },
+                    {
+                        "name": "useColumnHeaders",
+                        "type": "select",
+                        "label": "Use column headers as IDs of the columns",
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                true,
+                                false
+                            ]
+                        }
+                    },
+                    {
+                        "name": "values",
+                        "spec": [
+                            {
+                                "name": "0",
+                                "type": "text",
+                                "label": "수집일시 (A)"
+                            },
+                            {
+                                "name": "1",
+                                "type": "text",
+                                "label": "상호명 (B)"
+                            },
+                            {
+                                "name": "2",
+                                "type": "text",
+                                "label": "이메일주소 (C)"
+                            },
+                            {
+                                "name": "3",
+                                "type": "text",
+                                "label": "이메일수집동의 (D)"
+                            },
+                            {
+                                "name": "4",
+                                "type": "text",
+                                "label": "이름 (E)"
+                            },
+                            {
+                                "name": "5",
+                                "type": "text",
+                                "label": "(F)"
+                            },
+                            {
+                                "name": "6",
+                                "type": "text",
+                                "label": "(G)"
+                            },
+                            {
+                                "name": "7",
+                                "type": "text",
+                                "label": "(H)"
+                            },
+                            {
+                                "name": "8",
+                                "type": "text",
+                                "label": "(I)"
+                            },
+                            {
+                                "name": "9",
+                                "type": "text",
+                                "label": "(J)"
+                            },
+                            {
+                                "name": "10",
+                                "type": "text",
+                                "label": "(K)"
+                            },
+                            {
+                                "name": "11",
+                                "type": "text",
+                                "label": "(L)"
+                            },
+                            {
+                                "name": "12",
+                                "type": "text",
+                                "label": "(M)"
+                            },
+                            {
+                                "name": "13",
+                                "type": "text",
+                                "label": "(N)"
+                            },
+                            {
+                                "name": "14",
+                                "type": "text",
+                                "label": "(O)"
+                            },
+                            {
+                                "name": "15",
+                                "type": "text",
+                                "label": "(P)"
+                            },
+                            {
+                                "name": "16",
+                                "type": "text",
+                                "label": "(Q)"
+                            },
+                            {
+                                "name": "17",
+                                "type": "text",
+                                "label": "(R)"
+                            },
+                            {
+                                "name": "18",
+                                "type": "text",
+                                "label": "(S)"
+                            },
+                            {
+                                "name": "19",
+                                "type": "text",
+                                "label": "(T)"
+                            },
+                            {
+                                "name": "20",
+                                "type": "text",
+                                "label": "(U)"
+                            },
+                            {
+                                "name": "21",
+                                "type": "text",
+                                "label": "(V)"
+                            },
+                            {
+                                "name": "22",
+                                "type": "text",
+                                "label": "(W)"
+                            },
+                            {
+                                "name": "23",
+                                "type": "text",
+                                "label": "(X)"
+                            },
+                            {
+                                "name": "24",
+                                "type": "text",
+                                "label": "(Y)"
+                            },
+                            {
+                                "name": "25",
+                                "type": "text",
+                                "label": "(Z)"
+                            }
+                        ],
+                        "type": "collection",
+                        "label": "Values in columns",
+                        "metadata": [
+                            [
+                                [
+                                    "수집일시",
+                                    "상호명",
+                                    "이메일주소",
+                                    "이메일수집동의",
+                                    "이름"
+                                ]
+                            ]
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "id": 7,
+            "module": "google-email:sendAnEmail",
+            "version": 4,
+            "parameters": {
+                "__IMTCONN__": 9452533
+            },
+            "mapper": {
+                "to": [
+                    "{{1.email}}"
+                ],
+                "subject": "[우리가게 AI 점검] {{1.store}} AI 점검 리포트",
+                "bodyType": "rawHtml",
+                "from": "\"우리가게AI 점검\" <jfyouni@gmail.com>",
+                "content": "{{1.report_html}}"
+            },
+            "metadata": {
+                "designer": {
+                    "x": 900,
+                    "y": 0
+                },
+                "setupValidation": {
+                    "version": 1,
+                    "configuration": "7062d1caf4caf6da",
+                    "result": {
+                        "valid": true,
+                        "fields": []
+                    }
+                },
+                "restore": {
+                    "parameters": {
+                        "__IMTCONN__": {
+                            "label": "Gmail connection (jfyouni@gmail.com)",
+                            "data": {
+                                "scoped": "true",
+                                "connection": "google-email"
+                            }
+                        }
+                    },
+                    "expect": {
+                        "to": {
+                            "mode": "chose",
+                            "items": [
+                                null
+                            ]
+                        },
+                        "bodyType": {
+                            "label": "Raw HTML"
+                        },
+                        "attachments": {
+                            "mode": "chose"
+                        },
+                        "from": {
+                            "mode": "chose",
+                            "label": "\"우리가게AI 점검\" <jfyouni@gmail.com>"
+                        },
+                        "cc": {
+                            "mode": "chose"
+                        },
+                        "bcc": {
+                            "mode": "chose"
+                        },
+                        "emailHeaders": {
+                            "mode": "chose"
+                        }
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "__IMTCONN__",
+                        "type": "account:google-email",
+                        "label": "Connection",
+                        "required": true
+                    }
+                ],
+                "expect": [
+                    {
+                        "name": "to",
+                        "type": "array",
+                        "label": "To",
+                        "required": true,
+                        "spec": {
+                            "type": "email",
+                            "label": "Recipient email address",
+                            "required": true,
+                            "validate": true,
+                            "name": "value"
+                        }
+                    },
+                    {
+                        "name": "subject",
+                        "type": "text",
+                        "label": "Subject"
+                    },
+                    {
+                        "name": "bodyType",
+                        "type": "select",
+                        "label": "Body type",
+                        "required": true,
+                        "validate": {
+                            "enum": [
+                                "rawHtml",
+                                "collection"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "attachments",
+                        "type": "array",
+                        "label": "Attachments",
+                        "spec": {
+                            "spec": [
+                                {
+                                    "name": "filename",
+                                    "type": "filename",
+                                    "label": "File name",
+                                    "required": true,
+                                    "semantic": "file:name"
+                                },
+                                {
+                                    "name": "data",
+                                    "type": "buffer",
+                                    "label": "Data",
+                                    "required": true,
+                                    "semantic": "file:data"
+                                }
+                            ],
+                            "type": "collection",
+                            "label": "Attachment",
+                            "name": "value"
+                        }
+                    },
+                    {
+                        "name": "from",
+                        "type": "select",
+                        "label": "From"
+                    },
+                    {
+                        "name": "cc",
+                        "type": "array",
+                        "label": "CC recipients",
+                        "spec": {
+                            "type": "email",
+                            "label": "Recipient email address",
+                            "name": "value"
+                        }
+                    },
+                    {
+                        "name": "bcc",
+                        "type": "array",
+                        "label": "BCC recipients",
+                        "spec": {
+                            "type": "email",
+                            "label": "Recipient email address",
+                            "name": "value"
+                        }
+                    },
+                    {
+                        "name": "emailHeaders",
+                        "type": "array",
+                        "label": "Additional email headers",
+                        "spec": {
+                            "spec": [
+                                {
+                                    "name": "key",
+                                    "type": "text",
+                                    "label": "Key",
+                                    "required": true
+                                },
+                                {
+                                    "name": "value",
+                                    "type": "text",
+                                    "label": "Value"
+                                }
+                            ],
+                            "type": "collection",
+                            "label": "Email header",
+                            "name": "value"
+                        }
+                    },
+                    {
+                        "name": "content",
+                        "type": "text",
+                        "label": "Content"
+                    }
+                ],
+                "advanced": true
+            }
+        }
+    ],
+    "metadata": {
+        "instant": true,
+        "version": 1,
+        "scenario": {
+            "roundtrips": 1,
+            "maxErrors": 3,
+            "autoCommit": true,
+            "autoCommitTriggerLast": true,
+            "sequential": false,
+            "slots": null,
+            "confidential": false,
+            "dataloss": false,
+            "dlq": false,
+            "freshVariables": false
+        },
+        "designer": {
+            "orphans": []
+        },
+        "zone": "eu1.make.com",
+        "notes": []
     }
-  ],
-  "metadata": {
-    "instant": true,
-    "version": 1,
-    "scenario": {
-      "roundtrips": 1,
-      "maxErrors": 3,
-      "autoCommit": true,
-      "autoCommitTriggerLast": true,
-      "sequential": false,
-      "slots": null,
-      "confidential": false,
-      "dataloss": false,
-      "dlq": false,
-      "freshVariables": false
-    },
-    "designer": {
-      "orphans": []
-    },
-    "zone": "eu1.make.com",
-    "notes": []
-  }
 }
