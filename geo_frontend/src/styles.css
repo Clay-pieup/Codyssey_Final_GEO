@@ -83,6 +83,9 @@ footer { display:flex; justify-content:space-between; align-items:center; gap:12
 .place-item span { color:#8879e8; font-size:10px; }
 .place-item small { color:#9297a7; font-size:10px; }
 .place-message { margin:7px 0 0; color:#b4561f; font-size:10px; }
+/* 개선 피드백 F1 (11/4): 목록마다 지역 표시 + 다시 검색 안내 */
+.place-area { margin-left:6px; padding:1px 7px; border-radius:8px; background:#f0edff; color:#5948c8; font-size:10px; font-style:normal; font-weight:700; }
+.place-tip { margin:7px 0 0; padding:8px 11px; border-radius:8px; background:#f7f6ff; color:#5f50c2; font-size:10px; line-height:1.6; }
 
 /* 결과 리포트 (10/31) */
 .result-section { margin-bottom:16px; }

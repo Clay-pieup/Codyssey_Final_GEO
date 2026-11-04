@@ -51,6 +51,16 @@ function questionRows(report) {
   });
 }
 
+// 가게 검색 목록에서 어느 지역 가게인지 한눈에 보이게: "서울특별시 영등포구 대림동 …" → "서울 영등포구"
+// (개선 피드백 F1: 같은 이름 가게가 여러 지역에 있으면 서울 가게만 나올 수 있음)
+const SHORT_PROVINCE = { 경상남도: "경남", 경상북도: "경북", 전라남도: "전남", 전라북도: "전북", 전북특별자치도: "전북",
+  충청남도: "충남", 충청북도: "충북", 경기도: "경기", 강원도: "강원", 강원특별자치도: "강원", 제주특별자치도: "제주" };
+function areaOf(address) {
+  const [province = "", city = ""] = (address || "").split(" ");
+  const short = SHORT_PROVINCE[province] || province.replace(/(특별시|광역시|특별자치시)$/, "");
+  return `${short} ${city}`.trim();
+}
+
 function App() {
   const [form, setForm] = useState({
     storeName: "",
@@ -413,19 +423,23 @@ menu: ""
                     <Search size={16} /> {isSearching ? "검색 중…" : "검색"}
                   </button>
                 </div>
-                <p className="field-help">가게 이름과 동네를 함께 넣고 [검색]을 누르면 지역과 대표 메뉴가 자동으로 채워집니다. 목록에 없으면 직접 입력해도 됩니다.</p>
+                <p className="field-help">같은 이름 가게가 여러 지역에 있으면 <b>가게 이름 뒤에 도시나 동네</b>를 붙여 검색해 주세요 (예: 명동교자 명동, ○○식당 부산). 고르면 지역과 대표 메뉴가 자동으로 채워지고, 목록에 없으면 직접 입력해도 됩니다.</p>
                 {places.length > 0 && (
-                  <ul className="place-list">
-                    {places.map((place, index) => (
-                      <li key={index}>
-                        <button type="button" className="place-item" onClick={() => pickPlace(place)}>
-                          <strong>{place.name}</strong>
-                          <span>{place.category}</span>
-                          <small>{place.road_address || place.address}</small>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
+                  <>
+                    <ul className="place-list">
+                      {places.map((place, index) => (
+                        <li key={index}>
+                          <button type="button" className="place-item" onClick={() => pickPlace(place)}>
+                            <strong>{place.name} <em className="place-area">{areaOf(place.address)}</em></strong>
+                            <span>{place.category}</span>
+                            <small>{place.road_address || place.address}</small>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                    {/* 네이버는 5개까지만 줘서, 흔한 이름은 다른 지역 가게만 나올 수 있음 → 다시 검색하는 법을 바로 아래에 */}
+                    <p className="place-tip">우리 가게가 목록에 없나요? 가게 이름 뒤에 <b>도시나 동네</b>를 붙여 다시 검색해 보세요. (예: ○○식당 부산)</p>
+                  </>
                 )}
                 {placeMessage && <p className="place-message">{placeMessage}</p>}
 
