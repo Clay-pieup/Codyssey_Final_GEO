@@ -303,10 +303,14 @@ menu: ""
     setQuickOpen(false);
     openFeedback();
   };
-  const shownChoices = FEEDBACK_CHOICES.filter((choice) => choice.key !== quickField);
+  // AI가 우리 가게를 소개한 말이 없으면(노출률 0% 등) "소개한 말이 맞았나요?"는 묻지 않고 "소개 없음"으로 보냄
+  // (11/6 피드백 우선순위 3: 소개가 없는데 그 질문을 받은 T7·T9가 "일부 맞음"으로 답함 → 질문이 헷갈림)
+  const noIntro = !(report.summary?.descriptions || []).length;
+  const answers = noIntro ? { ...feedback, accuracy: "소개 없음" } : feedback;
+  const shownChoices = FEEDBACK_CHOICES.filter((choice) => choice.key !== quickField && !(noIntro && choice.key === "accuracy"));
 
   const sendFeedback = async () => {
-    if (FEEDBACK_CHOICES.some((choice) => !feedback[choice.key])) {
+    if (FEEDBACK_CHOICES.some((choice) => !answers[choice.key])) {
       setFeedbackError("보기를 고르는 문항에 모두 답해 주세요.");
       return;
     }
@@ -326,7 +330,7 @@ menu: ""
         headers: { "Content-Type": "application/json" },
         // 서버는 진단을 기억하지 못해서 리포트를 통째로 다시 보냄 (리포트 메일 발송에 필요)
         // 한 줄 질문에서 이미 메일을 보냈으면 이메일 없이 의견만 (메일 두 번 안 감)
-        body: JSON.stringify({ ...feedback, mode: "full", email: mailSentTo ? "" : feedback.email.trim(), consent: mailSentTo ? false : feedback.consent, report }),
+        body: JSON.stringify({ ...answers, mode: "full", email: mailSentTo ? "" : feedback.email.trim(), consent: mailSentTo ? false : feedback.consent, report }),
       });
       const data = await response.json();
       if (!data.ok) {
@@ -543,6 +547,7 @@ menu: ""
                     <p className="feedback-note">
                       리포트를 보신 그대로 답해 주세요. {shownChoices.length + 1}문항({shownChoices.length}번까지 필수), 1분이면 끝나요.
                       {quickField && " 앞에서 답해 주신 질문은 뺐어요."}
+                      {noIntro && " AI가 우리 가게를 소개한 말이 없어서 그 질문도 뺐어요."}
                     </p>
                     {shownChoices.map((choice, i) => (
                       <Choice key={choice.key} label={`${i + 1}. ${choice.label}`} options={choice.options} value={feedback[choice.key]} onPick={(v) => pickFeedback(choice.key, v)} hint={choice.hint} />
