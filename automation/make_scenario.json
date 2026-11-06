@@ -138,7 +138,7 @@
                                 "scoped": "true",
                                 "connection": "google"
                             },
-                            "label": "Yujin's Google connection"
+                            "label": "Google connection (이름 가림)"
                         }
                     }
                 },
@@ -495,7 +495,7 @@
                                 "scoped": "true",
                                 "connection": "google"
                             },
-                            "label": "Yujin's Google connection (sender@example.com)"
+                            "label": "Google connection (이름 가림) (sender@example.com)"
                         }
                     }
                 },
