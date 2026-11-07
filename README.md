@@ -40,7 +40,7 @@
 | 필수 기술 요소 (G3) | 이 서비스에서 | 코드 위치 |
 | --- | --- | --- |
 | AI Agent | 질문 도구 3개(직접 지명형·경쟁 비교형·상황 세분형)를 함수로 주고, Gemini가 진단 결과를 보고 호출할 도구를 스스로 선택 | `ai/agent.py`, `ai/gemini_client.py` `choose_tools()` |
-| 자동화 워크플로우 | 진단 완료 이벤트 → Make 웹훅 → 구글 시트 기록 / 의견 팝업 제출 → Make → 연락처 시트 + Gmail 리포트 발송, 의견은 Apps Script로 피드백 시트 (사람 개입 없음) | `server/make_sender.py`, [`automation/make_scenario.json`](automation/make_scenario.json) |
+| 자동화 워크플로우 | 진단 완료 이벤트 → Make 웹훅 → 구글 시트 기록 / 메일 보관(리포트 중간 팝업) 또는 의견 팝업 제출(이메일·동의) → Make → 연락처 시트 + Gmail 리포트 발송, 의견은 Apps Script로 피드백 시트 (사람 개입 없음) | `server/make_sender.py`, [`automation/make_scenario.json`](automation/make_scenario.json) |
 
 ## 4. 문서
 

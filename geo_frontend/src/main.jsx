@@ -18,7 +18,7 @@ const EMPTY_FEEDBACK = { clarity: 0, accuracy: "", competitors: "", useful: "", 
 
 // 보기를 고르는 필수 문항. 중간 팝업에서 이미 답한 문항은 빼고 보여 주므로 번호는 화면에서 매김
 const FEEDBACK_CHOICES = [
-  { key: "clarity", label: "진단 결과(언급률·질문별 결과)를 이해하기 쉬웠나요?", options: [1, 2, 3, 4, 5], hint: "1 어려웠어요 · 5 쉬웠어요" },
+  { key: "clarity", label: "진단 결과(노출률·질문별 결과)를 이해하기 쉬웠나요?", options: [1, 2, 3, 4, 5], hint: "1 어려웠어요 · 5 쉬웠어요" },
   { key: "accuracy", label: "'AI가 우리 가게를 소개한 말'이 실제 가게와 맞았나요?", options: ["맞음", "일부 맞음", "틀림", "소개 없음"] },
   { key: "competitors", label: "'AI 답변에 함께 나온 가게'가 실제 경쟁 가게와 비슷했나요?", options: ["비슷해요", "일부 비슷해요", "달라요", "잘 모르겠어요"] },
   { key: "useful", label: "'개선 제안' 중 실제로 해 볼 만한 것이 있었나요?", options: ["있음", "없음"] },
