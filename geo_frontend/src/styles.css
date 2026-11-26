@@ -243,6 +243,21 @@ footer { display:flex; justify-content:space-between; align-items:center; gap:12
 .rp-shop-body span { color:#4e5968; font-size:12px; line-height:1.5; }
 .rp-shops b { color:#8b95a1; font-size:12px; white-space:nowrap; }
 
+/* ---------- 결과 리포트: AI가 말한 우리 가게 정보 (11/26, 오정보 점검) ---------- */
+.rp-facts { display:flex; flex-direction:column; gap:8px; margin:0 0 12px; padding:0; list-style:none; }
+.rp-facts li { display:grid; grid-template-columns:64px minmax(0,1fr) auto; gap:10px; align-items:center; padding:10px 12px; background:white; border-radius:14px; }
+.rp-fact-item { color:#4e5968; font-size:12px; font-weight:800; }
+.rp-fact-text { min-width:0; color:#191f28; font-size:14px; line-height:1.5; overflow-wrap:anywhere; }
+.rp-fact-text small { margin-left:8px; color:#8b95a1; font-size:12px; font-weight:700; white-space:nowrap; }
+.rp-fact-badge { padding:3px 9px; border-radius:8px; font-size:12px; font-weight:800; white-space:nowrap; }
+.rp-fact-badge.bad { color:#f04452; background:#ffeeee; }
+.rp-fact-badge.warn { color:#b77a00; background:#fff4dc; }
+.rp-fact-badge.good { color:#00a661; background:#e3f7ed; }
+@media (max-width: 520px) {
+  .rp-facts li { grid-template-columns:minmax(0,1fr) auto; }
+  .rp-fact-item { grid-column:1 / -1; }
+}
+
 /* ---------- 결과 리포트: AI에게 물어본 질문 (리포트 개편 단위 4, ReportQuestions.jsx) ---------- */
 .rq { margin:0 0 40px; }
 .rq-list-wrap { border-top:1px solid #e5e8eb; }

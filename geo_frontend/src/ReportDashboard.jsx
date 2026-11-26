@@ -117,7 +117,7 @@ export function ReportHero({ report }) {
   );
 }
 
-// ---------- 한눈에 보기 (카드 7개) ----------
+// ---------- 한눈에 보기 (카드 9개, 11/26 전 리포트는 8개) ----------
 export function ReportOverview({ report, rows }) {
   const summary = report.summary || {};
   const mention = summary.mention || {};
@@ -156,6 +156,21 @@ export function ReportOverview({ report, rows }) {
 
   // 1-2) AI가 우리 가게를 소개한 말: 가장 많이 쓴 소개 문장 3개 (서버가 셈)
   const quotes = (summary.descriptions || []).slice(0, 3);
+
+  // 1-3) AI가 말한 우리 가게 정보 (11/26, 위즈더플래닝 "오정보 여부" 벤치마킹)
+  // 서버가 위치·메뉴·가격·영업시간을 뽑아 입력(동·대표 메뉴)과 비교해 줌. 11/26 전 리포트에는 칸이 없어 카드를 숨김
+  const facts = Array.isArray(summary.facts) ? summary.facts : null;
+  const wrongFacts = (facts || []).filter((f) => f.check === "다름").length;
+  const askFacts = (facts || []).filter((f) => f.check === "모름").length;
+  const factTitle = !facts ? ""
+    : !mentioned ? "우리 가게가 나온 답변이 없어 점검할 정보가 없어요"
+    : !facts.length ? "AI가 위치·메뉴·가격을 따로 말하지 않았어요"
+    : wrongFacts ? <>입력한 정보와 <b className="bad">다른 내용이 {wrongFacts}개</b> 있어요</>
+    : askFacts ? <>맞는지 확인해 볼 정보가 <b>{askFacts}개</b> 있어요</>
+    : <>AI가 말한 정보가 <b>입력과 같아요</b></>;
+  const factBadge = { "다름": ["입력과 달라요", "bad"], "모름": ["확인해 주세요", "warn"], "같음": ["입력과 같아요", "good"] };
+  const cardCount = facts ? 9 : 8;
+  const cardWord = cardCount === 9 ? "아홉" : "여덟";
 
   // 2) 순위 분포: 여러 가게를 나열한 답변에서 몇 번째였나
   const ranked = okAnswers.filter((a) => a.mentioned);
@@ -222,7 +237,7 @@ export function ReportOverview({ report, rows }) {
 
   return (
     <section className="rp-overview">
-      <div className="rp-head"><h2>한눈에 보기</h2><p>AI 답변 {valid}개를 여덟 가지로 나눠 봤어요.</p></div>
+      <div className="rp-head"><h2>한눈에 보기</h2><p>AI 답변 {valid}개를 {cardWord} 가지로 나눠 봤어요.</p></div>
       <div className="rp-bento">
         <Tile size="w3" kicker="AI 노출률" title={rate == null ? "노출률을 계산하지 못했어요" : <>노출률 <b>{rate}%</b>, {grade?.name === "강함" ? "잘 나오는 편이에요" : grade?.name === "보통" ? "보통이에요" : "아직 약한 편이에요"}</>}>
           <div className="rp-scale">
@@ -241,6 +256,23 @@ export function ReportOverview({ report, rows }) {
             </div>
           ) : <p className="rp-sub">{mentioned ? "우리 가게가 나온 답변에 소개 문장이 없었어요." : "우리 가게가 나온 답변이 없어요."}</p>}
         </Tile>
+
+        {facts && (
+          <Tile size="w6" kicker="AI가 말한 우리 가게 정보" title={factTitle}>
+            {facts.length > 0 && (
+              <ul className="rp-facts">
+                {facts.map((f) => (
+                  <li key={`${f.item}-${f.text}`}>
+                    <span className="rp-fact-item">{f.item}</span>
+                    <span className="rp-fact-text">“{f.text}”<small>답변 {f.count}개</small></span>
+                    <span className={`rp-fact-badge ${factBadge[f.check]?.[1] || "warn"}`}>{factBadge[f.check]?.[0] || "확인해 주세요"}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="rp-sub">위치·대표 메뉴는 입력하신 동네·메뉴와 비교했어요. 가격·영업시간은 저희가 알 수 없어서 사장님이 맞는지 확인해 주세요. AI가 읽은 문장이라 틀릴 수 있어요.</p>
+          </Tile>
+        )}
 
         {/* 카드 이름은 의견 팝업 3번 질문("'AI 답변에 함께 나온 가게'가 실제 경쟁 가게와 비슷했나요?")과 같게 */}
         <Tile size="w6" kicker="AI 답변에 함께 나온 가게 · 점유율" title={shareTitle}>

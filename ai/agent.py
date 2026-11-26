@@ -136,7 +136,7 @@ def run_agent(store: str, dong: str, station: str, menus: list[str], summary: di
     answers = run_queries(picked)
     for p in picked:
         part = [a for a in answers if a["question_id"] == p["id"]]
-        analyze_question(store, dong, p["text"], part)
+        analyze_question(store, dong, p["text"], part, menus)
         valid = [a for a in part if a["status"] == "ok"]
         hits = [a for a in valid if a["mentioned"]]
         others = sorted({s["name"] for a in valid for s in a["other_stores"]})[:5]

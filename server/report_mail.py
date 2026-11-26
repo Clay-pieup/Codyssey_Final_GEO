@@ -2,7 +2,7 @@
 
 근거: docs/ARCHITECTURE.md 5장 (Make로 보내는 칸 report_html), 진행 기록 10/31·11/1 (리포트 개편 단위 5: 메일도 새 화면에 맞춤)
 - 화면 결과 리포트와 같은 순서·같은 문장 규칙으로 만든다
-  요약 띠(ReportDashboard.jsx) → 한눈에 보기 8칸 → 질문 10개(ReportQuestions.jsx) → AI 추가 진단(ReportAgent.jsx)
+  요약 띠(ReportDashboard.jsx) → 한눈에 보기 9칸(11/26 전 리포트는 8칸) → 질문 10개(ReportQuestions.jsx) → AI 추가 진단(ReportAgent.jsx)
   → 개선 제안(ReportSuggestions.jsx) → 안내
 - 메일 프로그램(Gmail·네이버 메일)은 그림(SVG), 버튼, 펼치기, <style> 묶음을 지우거나 막는다
   → 도넛 대신 한 줄짜리 나눔 막대. 모든 그림은 <table> 칸의 너비·색으로, 꾸밈은 태그마다 style="..."로
@@ -260,6 +260,32 @@ def overview(report: dict, rows: list[dict]) -> str:
         body = f'<div style="color:{SUB};font-size:13px;">{"우리 가게가 나온 답변에 소개 문장이 없었어요." if hit else "우리 가게가 나온 답변이 없어요."}</div>'
     cards.append(card("AI가 우리 가게를 소개한 말", "AI는 우리 가게를 이렇게 소개해요" if quotes else "AI 답변에서 우리 가게를 소개한 말이 없어요", body))
 
+    # 2-1) AI가 말한 우리 가게 정보 (11/26, 오정보 점검). 11/26 전 리포트에는 칸이 없어 넣지 않음 (화면과 같음)
+    facts = summary.get("facts")
+    if isinstance(facts, list):
+        wrong = sum(1 for f in facts if f.get("check") == "다름")
+        ask = sum(1 for f in facts if f.get("check") == "모름")
+        if not hit:
+            fact_title = "우리 가게가 나온 답변이 없어 점검할 정보가 없어요"
+        elif not facts:
+            fact_title = "AI가 위치·메뉴·가격을 따로 말하지 않았어요"
+        elif wrong:
+            fact_title = f"입력한 정보와 {b(f'다른 내용이 {wrong}개', RED)} 있어요"
+        elif ask:
+            fact_title = f"맞는지 확인해 볼 정보가 {b(f'{ask}개')} 있어요"
+        else:
+            fact_title = f"AI가 말한 정보가 {b('입력과 같아요')}"
+        badges = {"다름": ("입력과 달라요", RED, RED_SOFT), "모름": ("확인해 주세요", WARN, WARN_SOFT), "같음": ("입력과 같아요", GREEN, GREEN_SOFT)}
+        rows_html = "".join(white_box(
+            f'<table {TABLE}><tr><td width="60" valign="top" style="color:{SUB};font-size:12px;font-weight:800;">{esc(f.get("item"))}</td>'
+            f'<td style="color:{INK};font-size:14px;">“{esc(f.get("text"))}”<span style="color:{MUTE};font-size:12px;font-weight:700;"> · 답변 {esc(f.get("count") or 0)}개</span></td>'
+            f'<td width="96" align="right" valign="top"><span style="display:inline-block;padding:2px 8px;border-radius:7px;'
+            f'background:{badges.get(f.get("check"), badges["모름"])[2]};color:{badges.get(f.get("check"), badges["모름"])[1]};font-size:12px;font-weight:800;">'
+            f'{badges.get(f.get("check"), badges["모름"])[0]}</span></td></tr></table>') for f in facts)
+        note = (f'<div style="color:{MUTE};font-size:11px;padding-top:8px;">위치·대표 메뉴는 입력하신 동네·메뉴와 비교했어요. '
+                f'가격·영업시간은 저희가 알 수 없어서 사장님이 맞는지 확인해 주세요. AI가 읽은 문장이라 틀릴 수 있어요.</div>')
+        cards.append(card("AI가 말한 우리 가게 정보", fact_title, rows_html + note))
+
     # 3) AI 답변에 함께 나온 가게 · 점유율 (의견 팝업 3번 질문과 같은 이름). 메일은 도넛 대신 한 줄 나눔 막대
     parts, top = share_of(report)
     total = sum(p["value"] for p in parts)
@@ -353,7 +379,8 @@ def overview(report: dict, rows: list[dict]) -> str:
     cards.append(card(f"질문 {len(rows)}개 × 답변 3번", heat_title,
                       f'<table {TABLE}>{heat}</table><div style="color:{MUTE};font-size:11px;padding-top:8px;">보라 칸 = 우리 가게가 나온 답변 · 회색 칸 = AI가 답하지 못한 경우</div>'))
 
-    return section_head("한눈에 보기", f"AI 답변 {valid}개를 여덟 가지로 나눠 봤어요.") + "".join(cards)
+    word = {8: "여덟", 9: "아홉"}.get(len(cards), str(len(cards)))
+    return section_head("한눈에 보기", f"AI 답변 {valid}개를 {word} 가지로 나눠 봤어요.") + "".join(cards)
 
 
 def questions(rows: list[dict]) -> str:

@@ -99,19 +99,48 @@ def run_queries(questions: list[dict]) -> list[dict]:
 
 # ---------------------------------------------------------------- 3. 답변 분석
 
-def analyze_question(store: str, dong: str, question: str, answers: list[dict]) -> None:
+# AI 속 가게 정보 점검 (11/26, 위즈더플래닝 "오정보 여부" 벤치마킹)
+FACT_ITEMS = ("위치", "메뉴", "가격", "영업시간", "기타")
+FACT_CHECKS = ("다름", "모름", "같음")  # 화면·메일에 보여 주는 순서: 입력과 다른 것 → 확인이 필요한 것 → 같은 것
+
+
+def _clean_facts(raw, dong: str) -> list[dict]:
+    """AI가 뽑은 가게 정보(facts)를 정해진 모양으로 정리한다. 이상한 값은 버리고 최대 4개.
+
+    AI가 위치를 "다름"이라고 했어도 입력한 동 이름이 그대로 들어 있으면 "같음"으로 바로잡는다
+    (예: "망원동 망원시장 근처"를 다른 동으로 잘못 판정하는 경우)
+    """
+    facts = []
+    for f in raw if isinstance(raw, list) else []:
+        if not isinstance(f, dict):
+            continue
+        item, text, check = str(f.get("item", "")).strip(), str(f.get("text", "")).strip()[:60], str(f.get("check", "")).strip()
+        if not text:
+            continue
+        item = item if item in FACT_ITEMS else "기타"
+        check = check if check in FACT_CHECKS else "모름"
+        if item in ("가격", "영업시간", "기타"):
+            check = "모름"  # 입력에 없는 정보라 맞는지 알 수 없음 → 사장님 확인
+        if item == "위치" and check == "다름" and dong and dong in text:
+            check = "같음"
+        facts.append({"item": item, "text": text, "check": check})
+    return facts[:4]
+
+
+def analyze_question(store: str, dong: str, question: str, answers: list[dict], menus: list[str] | None = None) -> None:
     """같은 질문의 정상 답변들을 한 번에 분석해 각 answer dict에 결과를 채운다 (호출 1회)."""
     key = store_key(store)
     valid = [a for a in answers if a["status"] == "ok"]
     for a in answers:  # 기본값: 코드 판정만
         a["mention_check"] = {"code": bool(key and key in normalize(a["text"])), "ai": None}
         a["mentioned"] = a["mention_check"]["code"] if a["status"] == "ok" else None
-        a.update({"rank": None, "description": None, "sentiment": None, "other_stores": []})
+        a.update({"rank": None, "description": None, "sentiment": None, "other_stores": [], "facts": []})
     if not valid:
         return
 
     blocks = "\n\n".join(f"[답변 {i}]\n{a['text'][:3000]}" for i, a in enumerate(valid, 1))
-    prompt = load_prompt("answer_analysis", store_name=store, dong=dong, question=question, answers=blocks)
+    prompt = load_prompt("answer_analysis", store_name=store, dong=dong, menus=", ".join(menus or []) or "입력 없음",
+                         question=question, answers=blocks)
     r = ask_gemini(prompt, temperature=0, json_output=True)
     try:
         results = {int(x["no"]): x for x in json.loads(r.text)["results"]} if r.ok else {}
@@ -130,15 +159,16 @@ def analyze_question(store: str, dong: str, question: str, answers: list[dict]) 
             a["rank"] = x.get("rank") if x.get("is_list") else None
             a["description"] = x.get("description")
             a["sentiment"] = x.get("sentiment")
+            a["facts"] = _clean_facts(x.get("facts"), dong)
         a["other_stores"] = [s for s in (x.get("other_stores") or []) if isinstance(s, dict) and s.get("name")][:5]
 
 
-def analyze_all(store: str, dong: str, answers: list[dict]) -> None:
+def analyze_all(store: str, dong: str, answers: list[dict], menus: list[str] | None = None) -> None:
     by_q = {}
     for a in answers:
         by_q.setdefault(a["question_id"], []).append(a)
     with ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
-        list(pool.map(lambda item: analyze_question(store, dong, item[1][0]["question"], item[1]), by_q.items()))
+        list(pool.map(lambda item: analyze_question(store, dong, item[1][0]["question"], item[1], menus), by_q.items()))
 
 
 # ---------------------------------------------------------------- 4. 집계
@@ -177,6 +207,25 @@ def _source_kind(name: str) -> str:
         if any(k in name for k in keys):
             return kind
     return "기타"
+
+
+def collect_facts(answers: list[dict]) -> list[dict]:
+    """답변마다 뽑은 가게 정보를 모아, 같은 내용은 하나로 합치고 몇 개 답변에서 나왔는지 센다. 최대 6개.
+
+    순서: 입력과 다른 것(다름) → 사장님 확인이 필요한 것(모름) → 입력과 같은 것(같음), 같은 종류면 많이 나온 것부터
+    """
+    merged = {}
+    for a in answers:
+        if a["status"] != "ok" or not a.get("mentioned"):
+            continue
+        seen = set()
+        for f in a.get("facts") or []:
+            k = (f["item"], normalize(f["text"]))
+            if k in seen:
+                continue  # 한 답변 안에서 같은 말을 두 번 해도 1개로 셈
+            seen.add(k)
+            merged.setdefault(k, {**f, "count": 0})["count"] += 1
+    return sorted(merged.values(), key=lambda f: (FACT_CHECKS.index(f["check"]), -f["count"]))[:6]
 
 
 def summarize(store: str, answers: list[dict]) -> dict:
@@ -225,6 +274,7 @@ def summarize(store: str, answers: list[dict]) -> dict:
         "sentiment": dict(sentiments),
         "competitors": competitors,
         "sources": {"total": len(names), "kinds": source_kinds, "sites": top_sites},
+        "facts": collect_facts(answers),  # AI가 말한 우리 가게 정보 (11/26)
     }
 
 
@@ -232,7 +282,7 @@ def summarize(store: str, answers: list[dict]) -> dict:
 
 # 개선 제안 근거에 영어 칸 이름이 그대로 나오면 다시 만들게 하는 검사용 (10/26)
 FIELD_NAMES = re.compile(r"\b(mention|mentioned|valid|rate|by_type|rank|counted|first_place|competitors|descriptions|"
-                         r"sources|kinds|sites|agent_findings|menu_answers|total)\b", re.I)
+                         r"sources|kinds|sites|agent_findings|menu_answers|total|facts)\b", re.I)
 
 
 def _summary_for_prompt(summary: dict, agent: dict | None = None) -> str:
@@ -273,6 +323,14 @@ def _summary_for_prompt(summary: dict, agent: dict | None = None) -> str:
         lines.append(f"- 함께 자주 나온 가게: {c.get('name')} (답변 {c.get('answers', 0)}개에 등장{menu_part}{desc})")
     if not comps:
         lines.append("- 함께 자주 나온 가게: 없음")
+
+    # AI가 말한 우리 가게 정보 (11/26). 이전 리포트(칸 없음)는 "없음"으로 넘김
+    facts = summary.get("facts") or []
+    labels = {"다름": "사장님이 입력한 정보와 다름", "모름": "맞는지 사장님 확인이 필요함", "같음": "입력한 정보와 같음"}
+    for f in facts:
+        lines.append(f"- AI가 말한 우리 가게 {f.get('item')} 정보 \"{f.get('text')}\" (답변 {f.get('count', 0)}개): {labels.get(f.get('check'), '')}")
+    if not facts:
+        lines.append("- AI가 말한 우리 가게 정보(위치·메뉴·가격·영업시간): 없음")
 
     src = summary.get("sources") or {}
     if src.get("total"):
@@ -358,7 +416,7 @@ def run_diagnosis(store: str, region: str, menus: list[str], station: str = "") 
         report["answers"] = answers
         return _finish(report, started)
 
-    analyze_all(store, qs.dong, answers)
+    analyze_all(store, qs.dong, answers, menus)
     summary = summarize(store, answers)
     summary["low_reliability"] = summary["mention"]["valid"] < len(answers) * 2 / 3  # 측정기준 4장: 정상 답변 2/3 미만
     report.update(summary=summary, answers=answers)
@@ -489,6 +547,8 @@ def main() -> None:
         print(f"[AI가 소개하는 말] \"{d['text']}\" ({d['count']}회)")
     for c in s["competitors"]:
         print(f"[함께 나온 가게] {c['name']} - 답변 {c['answers']}개, 메뉴형 {c['menu_answers']} ({c['description']})")
+    for f in s.get("facts", []):
+        print(f"[AI가 말한 가게 정보] {f['item']}: \"{f['text']}\" ({f['count']}개 답변) → 입력과 {f['check']}")
     _print_agent_and_suggestions(rep)
 
     if rep.get("more_available"):
