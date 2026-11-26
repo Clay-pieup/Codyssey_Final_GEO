@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  ArrowRight, BarChart3, Bot, CheckCircle2, ChevronRight,
-  ClipboardCheck, Compass, Mail, MapPin, Search, ShieldCheck, Store,
+  ArrowRight, CheckCircle2, ChevronRight,
+  Compass, Mail, MapPin, Search, ShieldCheck, Store,
   Utensils, X
 } from "lucide-react";
 import { ReportHero, ReportOverview } from "./ReportDashboard.jsx";
@@ -11,6 +11,7 @@ import { ReportQuestions } from "./ReportQuestions.jsx";
 import { ReportAgent } from "./ReportAgent.jsx";
 import { ReportQuickAsk } from "./ReportQuickAsk.jsx";
 import { DiagnosisProgress } from "./DiagnosisProgress.jsx";
+import { LandingHero, LandingWhy, LandingSample, LandingHow, LandingFaq, LandingCta } from "./Landing.jsx";
 import "./styles.css";
 
 // ---------- 사장님 의견 팝업 (피드백, 10/31 화면 담당과 현장 논의) ----------
@@ -193,6 +194,14 @@ menu: ""
     }
   };
 
+  // 첫 화면 버튼: 입력 폼(id="start")이나 리포트 미리보기(id="sample")로 내려감 (11/26 랜딩 개편)
+  // 부드럽게 내려가는 효과는 styles.css의 scroll-behavior가 맡고, "움직임 줄이기" 설정이면 바로 이동
+  const goStart = () => {
+    document.getElementById("start")?.scrollIntoView({ block: "start" });
+    setTimeout(() => document.getElementById("storeName")?.focus({ preventScroll: true }), 500);
+  };
+  const goSample = () => document.getElementById("sample")?.scrollIntoView({ block: "start" });
+
   const reset = () => {
   setShowResult(false);
   setDiagnosisResult(null);
@@ -355,53 +364,27 @@ menu: ""
         </a>
         <div className="topbar-right">
           <span className="status-dot" /> 외식업 매장 AI 노출 진단
+          {!showResult && <button type="button" className="topbar-cta" onClick={goStart}>무료 진단</button>}
         </div>
       </header>
 
 
       {!showResult ? (
         <>
+          {/* 첫 화면 (11/26 개편, Landing.jsx): 제목 → 왜 확인해야 하나 → 리포트 미리보기 → 진단 방법 → 입력 폼 → 자주 묻는 질문 */}
+          <LandingHero onStart={goStart} onSample={goSample} />
           <main>
-            <section className="hero">
-              <div className="hero-copy">
-                <h1>AI가 우리 가게를<br /><span>추천하고 있을까요?</span></h1>
-                <p className="hero-desc">
-                  가게 정보를 입력하면 AI 검색 답변에서의 브랜드 노출을 진단하고,
-                  더 잘 발견되기 위한 개선 방향을 확인할 수 있습니다.
-                </p>
-                <div className="hero-points">
-                  <span><CheckCircle2 size={16} /> AI 답변 언급 확인</span>
-                  <span><CheckCircle2 size={16} /> 주변 경쟁 가게 비교</span>
-                  <span><CheckCircle2 size={16} /> 실행 가능한 개선 제안</span>
-                </div>
-              </div>
-              <div className="hero-visual" aria-hidden="true">
-                <div className="orbit orbit-one" />
-                <div className="orbit orbit-two" />
-                <div className="visual-card visual-main">
-                  <div className="visual-icon"><Bot size={27} /></div>
-                  <div>
-                    <strong>우리 가게는 발견되고 있나요?</strong>
-                  </div>
-                </div>
-                <div className="floating-card floating-top"><Search size={17} /><span>동네 맛집 검색</span><span className="mini-check">✓</span></div>
-                <div className="floating-card floating-bottom"><BarChart3 size={18} /><span>브랜드 노출 진단</span><span className="mini-bars"><i /><i /><i /><i /></span></div>
-                <div className="visual-spark spark-a">✦</div><div className="visual-spark spark-b">✧</div>
-              </div>
-            </section>
+            <LandingWhy />
+            <LandingSample onStart={goStart} />
+            <LandingHow />
 
-            <section className="content-grid">
+            <section className="content-grid" id="start">
               <div className="intro-column">
                 <h2>우리 가게 정보 입력</h2>
                 <p className="section-desc">매장 정보를 입력해 주세요.<br />진단 결과는 화면에 바로 나오고, 원하시면 리포트를 메일로도 받아 볼 수 있어요.</p>
                 <div className="privacy-note">
                   <ShieldCheck size={20} />
                   <div><strong>정보는 안전하게 관리합니다</strong><p>이메일은 리포트를 메일로 받을 때만, 동의를 받은 뒤 사용합니다.</p></div>
-                </div>
-                <div className="steps">
-                  <div className="step-item"><span className="step-number">01</span><div><strong>매장 정보 입력</strong><p>상호 · 지역 · 대표 메뉴</p></div></div>
-                  <div className="step-item"><span className="step-number">02</span><div><strong>AI 답변 노출 진단</strong><p>질문별 언급 여부와 경쟁 상황 분석</p></div></div>
-                  <div className="step-item"><span className="step-number">03</span><div><strong>개선 제안 확인</strong><p>매장 홍보에 적용할 다음 행동 확인</p></div></div>
                 </div>
               </div>
 
@@ -474,11 +457,8 @@ menu: ""
               </form>
             </section>
 
-            <section className="feature-strip">
-              <div className="feature"><div className="feature-icon purple"><Bot size={21} /></div><div><strong>AI 답변 분석</strong><p>질문에 가게 이름이 등장하는지 확인</p></div></div>
-              <div className="feature"><div className="feature-icon blue"><BarChart3 size={21} /></div><div><strong>경쟁 상황 파악</strong><p>같은 지역·메뉴의 다른 매장과 비교</p></div></div>
-              <div className="feature"><div className="feature-icon green"><ClipboardCheck size={21} /></div><div><strong>개선 방향 제안</strong><p>실행할 수 있는 다음 행동을 안내</p></div></div>
-            </section>
+            <LandingFaq />
+            <LandingCta onStart={goStart} />
           </main>
           {/* 진단 중 화면 (DiagnosisProgress.jsx): 결과가 올 때까지 단계·진행 막대·지난 시간을 보여 줌 */}
           {isDiagnosing && <DiagnosisProgress storeName={form.storeName.trim()} />}
